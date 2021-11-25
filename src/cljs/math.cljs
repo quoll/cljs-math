@@ -1,7 +1,6 @@
 (ns ^{:doc "ClojureScript wrapper functions for math operations"
       :author "Paula Gearon" }
-  cljs.math
-  )
+  cljs.math)
 
 (def
   ^{:doc "Constant for Euler's number e, the base for natural logarithms.
@@ -161,9 +160,6 @@
     (Math/floor a)
     (throw (ex-info "Unexpected Null passed to floor" {:fn "floor"}))))
 
-(def ^{:private true :const true}
-  two-to-the-52 0x10000000000000)
-
 (defn atan2
   {:doc "Returns the angle theta from the conversion of rectangular coordinates (x, y) to polar coordinates (r, theta).
   Computes the phase theta by computing an arc tangent of y/x in the range of -pi to pi.
@@ -196,13 +192,12 @@
   {:doc "Returns a positive double between 0.0 and 1.0, chosen pseudorandomly with
   approximately random distribution. Not cryptographically secure. The seed is chosen internally
   and cannot be selected.
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random"
    :added "1.10.892"}
   [] (Math/random))
 
 (defn add-exact
-  {:doc "Returns the sum of x and y, throws an exception on overflow.
-  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#addExact-long-long-"
+  {:doc "Returns the sum of x and y, throws an exception on overflow. "
    :added "1.10.892"}
   [x y]
   (let [r (+ x y)]
@@ -211,69 +206,67 @@
       r)))
 
 (defn subtract-exact
-  {:doc "Returns the difference of x and y, throws ArithmeticException on overflow.
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [x y] `(Math/subtractExact ~x ~y))
+  {:doc "Returns the difference of x and y, throws ArithmeticException on overflow. "
    :added "1.10.892"}
-  ^long [^long x ^long y]
-  (Math/subtractExact x y))
+  [x y]
+  (let [r (- x y)]
+    (if (or (> r js/Number.MAX_SAFE_INTEGER) (< r js/Number.MIN_SAFE_INTEGER))
+      (throw (ex-info "Integer overflow" {:fn "subtract-exact"}))
+      r)))
 
 (defn multiply-exact
-  {:doc "Returns the product of x and y, throws ArithmeticException on overflow.
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [x y] `(Math/multiplyExact ~x ~y))
+  {:doc "Returns the product of x and y, throws ArithmeticException on overflow. "
    :added "1.10.892"}
-  ^long [^long x ^long y]
-  (Math/multiplyExact x y))
+  [x y]
+  (let [r (* x y)]
+    (if (or (> r js/Number.MAX_SAFE_INTEGER) (< r js/Number.MIN_SAFE_INTEGER))
+      (throw (ex-info "Integer overflow" {:fn "multiply-exact"}))
+      r)))
 
 (defn increment-exact
-  {:doc "Returns a incremented by 1, throws ArithmeticException on overflow.
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [a] `(Math/incrementExact ~a))
+  {:doc "Returns a incremented by 1, throws ArithmeticException on overflow."
    :added "1.10.892"}
-  ^long [^long a]
-  (Math/incrementExact a))
+  [a]
+  (if (= a js/Number.MAX_SAFE_INTEGER)
+    (throw (ex-info "Integer overflow" {:fn "increment-exact"}))
+    (+ a 1)))
 
 (defn decrement-exact
-  {:doc "Returns a decremented by 1, throws ArithmeticException on overflow.
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [a] `(Math/decrementExact ~a))
+  {:doc "Returns a decremented by 1, throws ArithmeticException on overflow. "
    :added "1.10.892"}
-  ^long [^long a]
-  (Math/decrementExact a))
+  [a]
+  (if (= a js/Number.MIN_SAFE_INTEGER)
+    (throw (ex-info "Integer overflow" {:fn "decrement-exact"}))
+    (- a 1)))
 
 (defn negative-exact
-  {:doc "Returns the negation of a, throws ArithmeticException on overflow.
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [a] `(Math/negateExact ~a))
+  {:doc "Returns the negation of a, throws ArithmeticException on overflow. "
    :added "1.10.892"}
-  ^long [^long a]
-  (Math/negateExact a))
+  [a]
+  (if (or (> a js/Number.MAX_SAFE_INTEGER) (< a js/Number.MIN_SAFE_INTEGER))
+    (throw (ex-info "Integer overflow" {:fn "negative-exact"}))
+    (- a)))
 
 (defn floor-div
   {:doc "Integer division that rounds to negative infinity (as opposed to zero).
-  The special case (floorDiv Long/MIN_VALUE -1) overflows and returns Long/MIN_VALUE.
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [x y] `(Math/floorDiv ~x ~y))
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorDiv-long-long-"
    :added "1.10.892"}
-  ^long [^long x ^long y]
-  (Math/floorDiv x y))
+  [x y]
+  (if-not (and (js/Number.isInteger x) (js/Number.isInteger y))
+    (throw (ex-info "Integer operation called with non-integer arguments"
+                    {:x-int? (js/Number.isInteger x :y-int? (js/Number.isInteger y))}))
+    (let [r (Math/floor (/ x y))]
+      (if (and (< (bit-xor x y) 0) (not= (* r y) x))
+        (dec r)
+        r))))
 
 (defn floor-mod
   {:doc "Integer modulus x - (floorDiv(x, y) * y). Sign matches y and is in the
   range -|y| < r < |y|.
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [x y] `(Math/floorMod ~x ~y))
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorMod-long-long-"
    :added "1.10.892"}
-  ^long [^long x ^long y]
-  (Math/floorMod x y))
+  [x y]
+  (- x (* y (floor-div x y))))
 
 (defn abs
   {:doc "Returns the absolute value of a (long or double).
@@ -288,25 +281,22 @@
 
 (defn max
   {:doc "Returns the greater of a or b.
-  If doubles and a or b is ##NaN => ##NaN
-  If doubles and one is negative zero, other positive zero => positive zero
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [a b] `(Math/max ~a ~b))
+  If a or b is ##NaN => ##NaN
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/max"
    :added "1.10.892"}
   [a b]
   (Math/max a b))
 
 (defn min
   {:doc "Returns the lesser of a or b.
-  If doubles and a or b is ##NaN => ##NaN
-  If doubles and one is negative zero, other positive zero => negative zero
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [p0 p1] `(Math/min ~p0 ~p1))
+  If a or b is ##NaN => ##NaN
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min"
    :added "1.10.892"}
   [p0 p1]
   (Math/min p0 p1))
+
+
+;; TODO below here
 
 (defn ulp
   {:doc "Returns the size of an ulp (unit in last place) for d.
@@ -507,6 +497,9 @@
       (aset b sbyte (bit-or sign-sbyte mag-sbyte))
       ;; retrieve the full magnitude value with the updated byte
       (aget d 0))))
+
+(def ^{:private true :const true}
+  two-to-the-52 0x10000000000000)
 
 (defn rint
   {:doc "Returns the double closest to a and equal to a mathematical integer.
