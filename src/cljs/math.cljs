@@ -226,6 +226,7 @@
 (defn IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
+  Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_fmod.c
   bit-shift-left and bit-shift-right convert numbers to signed 32-bit
   Fortunately the values that are shifted are expected to be 32 bit signed."
    :private true}
@@ -314,6 +315,7 @@
    If dividend is finite and divisor is infinite => dividend
 
    Method: based on fmod return x-[x/p]chopped*p exactlp.
+   Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_remainder.c
    See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#IEEEremainder-double-double-"
     :added "1.10.892"}
   [dividend divisor]
