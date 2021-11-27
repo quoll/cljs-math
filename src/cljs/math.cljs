@@ -26,6 +26,28 @@
     :added "1.10.892"
     :const true} RADIANS_TO_DEGREES 57.29577951308232)
 
+(def ^{:private true :const true} two-to-the-52 0x10000000000000)
+
+(defn get-little-endian
+  "Tests the platform for endianness. Returns true when little-endian, false otherwise."
+  []
+  (let [a (js/ArrayBuffer. 2)
+        l (js/Uint16Array. a)
+        b (js/Uint8Array. a)]
+    (aset l 0 0xff00)
+    (= 0 (aget b 0))))
+
+(defonce ^:private little-endian? (get-little-endian))
+
+;; the HI and LO labels are terse to reflect the C macros they represent
+(def ^{:private true :doc "offset of hi integers in 64-bit values"} HI (if little-endian? 1 0))
+
+(def ^{:private true :doc "offset of hi integers in 64-bit values"} LO (- 1 HI))
+
+(def ^{:private true :const true} INT32-SIGN-BIT 0x80000000)
+
+(def ^{:private true :const true} INT32-NON-SIGN-BITS 0x7FFFFFFF)
+
 
 (defn sin
   {:doc "Returns the sine of an angle.
@@ -135,6 +157,181 @@
    :added "1.10.892"}
   [a] (Math/cbrt a))
 
+(defn fabs
+  {:doc "Internal function to convert doubles to absolute values.
+  This duplicates the C implementations in Java, in case there is are corner-case differences."
+   :private true
+   :added "1.10.892"}
+  [x]
+  ;; create a buffer large enough for a double
+  (let [a (js/ArrayBuffer. 8)
+        ;; represent the buffer as a double array
+        d (js/Float64Array. a)
+        ;; represent the buffer as 32 bit ints
+        i (js/Uint32Array. a)
+        hi (if little-endian? 1 0)]
+    ;; insert the double value into the buffer
+    (aset d 0 x)
+    ;; update the sign bit
+    (aset i hi (bit-and (aget i hi) INT32-NON-SIGN-BITS))
+    ;; return the new double
+    (aget d 0)))
+
+(defonce ^{:private true} Zero
+  ;; a buffer that can hold a pair of 64 bit doubles
+  (let [a (js/ArrayBuffer. 16)
+        ;; represent the buffer as a 2 double array
+        d (js/Float64Array. a)
+        ;; represent the buffer as an array of bytes
+        b (js/Uint8Array. a)]
+    ;; initialize both doubles to 0.0
+    (aset d 0 0.0)
+    (aset d 1 0.0)
+    ;; update the sign bit on the second double
+    (aset b (if little-endian? 15 8) 0x80)
+    ;; save the array of 2 doubles [0.0, -0.0]
+    d))
+
+(def ^{:private true :const true} xpos 0)
+(def ^{:private true :const true} ypos 1)
+(def ^{:private true} HI-x (+ xpos HI))
+(def ^{:private true} LO-x (+ xpos LO))
+(def ^{:private true} HI-y (+ ypos HI))
+(def ^{:private true} LO-y (+ ypos LO))
+
+(defn ilogb
+  {:doc "internal function for ilogb(x)"
+   :private true}
+  [hx lx]
+  (if (< hx 0x00100000) ;; subnormal
+    (let [hx-zero? (= 0 hx)
+          start-ix (if hx-zero? -1043 -1022)
+          start-i (if hx-zero? lx (bit-shift-left hx 11))]
+      (loop [ix start-ix i start-i]
+        (if-not (> i 0)
+          ix
+          (recur (dec ix) (bit-shift-left i 1)))))
+    (- (bit-shift-right hx 20) 1023)))
+
+(defn IEEE-fmod
+  {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
+  Reimplements __ieee754_fmod from the JDK.
+  bit-shift-left and bit-shift-right convert numbers to signed 32-bit
+  Fortunately the values that are shifted are expected to be 32 bit signed."
+   :private true}
+  [x y]
+  ;; return exception values
+  (if (or (zero? y) (js/Number.isNaN y) (not (js/Number.isFinite x)))
+    ##NaN
+
+    ;; create a buffer large enough for 2 doubles
+    (let [a (js/ArrayBuffer. 16)
+          ;; represent the buffer as a double array
+          d (js/Float64Array. a)
+          ;; represent the buffer as 32 bit ints
+          i (js/Uint32Array. a)
+          ;; set the doubles to x and y
+          _ (aset d xpos x)
+          _ (aset d ypos y)
+          hx (aget i HI-x)
+          lx (aget i LO-x)
+          hy (aget i HI-y)
+          ly (aget i LO-y)
+          sx (bit-and hx INT32-SIGN-BIT)      ;; capture the sign of x
+          hx (bit-xor hx sx)                  ;; set x to |x| using the sign
+          hy (bit-and hy INT32-NON-SIGN-BITS) ;; set y to |y|
+          hx<=hy (<= hx hy)]
+      (cond
+        ;; additional exception values
+        (and hx<=hy (or (< hx hy) (< lx ly))) x  ;; |x|<|y| return x
+        (and hy<=hy (= lx ly)) (aget Zero (bit-shift-right sx 31))  ;; |x|=|y| return x*0
+
+        :default
+        ;; determine ix = ilogb(x), iy = ilogb(y)
+        (let [ix (ilogb hx lx)
+              iy (ilogb hy ly)]
+          ;; TODO
+          ;; set up {hx,lx}, {hy,ly} and align y to x
+          ;; fix point fmod
+          ;; convert back to floating value and restore the sign
+          )))))
+
+(defn IEEE-remainder
+  {:doc "Returns the remainder per IEEE 754 such that
+    remainder = dividend - divisor * n
+   where n is the integer closest to the exact value of dividend / divisor.
+   If two integers are equally close, then n is the even one.
+   If the remainder is zero, sign will match dividend.
+   If dividend or divisor is ##NaN, or dividend is ##Inf or ##-Inf, or divisor is zero => ##NaN
+   If dividend is finite and divisor is infinite => dividend
+
+   Method: based on fmod return x-[x/p]chopped*p exactlp.
+   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#IEEEremainder-double-double-"
+    :added "1.10.892"}
+  [dividend divisor]
+  ;; check for exception values
+  (cond
+    (zero? divisor) ##NaN
+    (js/Number.isNaN divisor) ##NaN
+    ;; check if dividend is ##Inf ##-Inf or ##NaN
+    (not (js/Number.isFinite dividend)) ##NaN
+    ;; dividend is finish, check if divisor is infinite
+    (not (js/Number.isFinite divisor)) dividend
+
+    :default
+    ;; create a buffer large enough for 2 doubles
+    (let [a (js/ArrayBuffer. 16)
+          ;; represent the buffer as a double array
+          d (js/Float64Array. a)
+          ;; represent the buffer as 32 bit ints
+          i (js/Uint32Array. a)]
+      (aset d 0 dividend)
+      (aset d 1 divisor)
+      ;; x gets the dividend high and low ints
+      (let [hx (aget i HI)
+            lx (aget i LO)
+            ;; p gets the divisor high and low ints
+            hp (aget i (+ HI 2))
+            lp (aget i (+ LO 2))
+            ;; sx is the sign bit
+            sx (bit-and INT32-SIGN-BIT)
+            ;; strip the sign bit from hp and hx
+            hp (bit-and hp INT32-NON-SIGN-BITS)
+            hx (bit-and hx INT32-NON-SIGN-BITS)
+
+            ;;make x < 2p
+            dividend (if (<= hp 0x7FDFFFFF) (IEEE-fmod dividend (+ divisor divisor)) dividend)]
+        (if (zero? (bit-or (- hx hp) (- lx lp)))
+          (* 0.0 x)
+          ;; convert dividend and divisor to absolute values. 
+          (let [dividend (bit-and dividend INT32-NON-SIGN-BITS)
+                divisor (bit-and divisor INT32-NON-SIGN-BITS)
+                ;; reduce dividend within range of the divisor
+                dividend (if (< hp 0x00200000)
+                           ;; smaller divisor compare 2*dividend to the divisor
+                           (if (> (+ dividend dividend) divisor)
+                             (let [dividend (- dividend divisor)] ;; reduce the dividend
+                               (if (>= (+ dividend dividend) divisor) ;; 2*dividend still larger
+                                 (- dividend divisor) ;; reduce again
+                                 dividend))
+                             dividend)
+                           ;; compare dividend to half the divisor
+                           (let [divisor-half (* 0.5 divisor)]
+                             (if (> dividend divisor-half)
+                               (let [dividend (- dividend divisor)] ;; reduce the dividend
+                                 (if (>= dividend dividor-half) ;; still larger than half divisor
+                                   (- dividend divisor) ;; reduce again
+                                   dividend))
+                               dividend)))]
+            ;; update the buffer with the nex dividend value
+            (aset d 0 dividend)
+            ;; calculate a new hi int for the dividend using the saved sign bit
+            (let [hx (bit-xor (aget i HI) sx)]
+              ;; set the dividend with this new sign nit
+              (aset i HI hx)
+              ;; retrieve the updated dividend
+              (aget d 0))))))))
+
 (defn ceil
   {:doc "Returns the smallest double greater than or equal to a, and equal to a
   mathematical integer.
@@ -159,6 +356,46 @@
   (if a
     (Math/floor a)
     (throw (ex-info "Unexpected Null passed to floor" {:fn "floor"}))))
+
+(defn copy-sign
+  {:doc "Returns a double with the magnitude of the first argument and the sign of
+  the second.
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#copySign-double-double-"
+   :added "1.10.892"}
+  [magnitude sign]
+  ;; create a buffer large enough for 2 doubles
+  (let [a (js/ArrayBuffer. 16)
+        ;; represent the buffer as a double array
+        d (js/Float64Array. a)
+        ;; represent the buffer as bytes
+        b (js/Uint8Array. a)
+        ;; find the offset of the byte that holds the sign bit
+        sbyte (if little-endian? 7 0)]
+    ;; the first double holds the magnitude, the second holds the sign value
+    (aset d 0 magnitude)
+    (aset d 1 sign)
+    ;; read the sign bit from the sign value
+    (let [sign-sbyte (bit-and 0x80 (aget b (+ 8 sbyte)))
+          ;; read all the bits that aren't the sign bit in the same byte of the magnitude
+          mag-sbyte (bit-and 0x7F (aget b sbyte))]
+      ;; combine the sign bit from the sign value and the non-sign-bits from the magnitude value
+      ;; write it back into the byte in the magnitude
+      (aset b sbyte (bit-or sign-sbyte mag-sbyte))
+      ;; retrieve the full magnitude value with the updated byte
+      (aget d 0))))
+
+(defn rint
+  {:doc "Returns the double closest to a and equal to a mathematical integer.
+  If two values are equally close, return the even one.
+  If a is ##NaN or ##Inf or ##-Inf or zero => a
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#rint-double-"
+   :added "1.10.892"}
+  [a]
+  (let [sign (copy-sign 1.0, a)
+        a (abs a)
+        a (if (< a two-to-the-52)
+            (- (+ two-to-the-52 a) two-to-the-52) a)]
+    (* sign a)))
 
 (defn atan2
   {:doc "Returns the angle theta from the conversion of rectangular coordinates (x, y) to polar coordinates (r, theta).
@@ -460,83 +697,11 @@
   ^double [^double d scaleFactor]
   (Math/scalb d scaleFactor))
 
-(defn get-little-endian
-  "Tests the platform for endianness. Returns true when little-endian, false otherwise."
-  []
-  (let [a (js/ArrayBuffer. 2)
-        l (js/Uint16Array. a)
-        b (js/Uint8Array. a)]
-    (aset l 0 0xff00)
-    (= 0 (aget b 0))))
-
-(def ^{:private true :const true} little-endian? (get-little-endian))
-
-(defn copy-sign
-  {:doc "Returns a double with the magnitude of the first argument and the sign of
-  the second.
-  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#copySign-double-double-"
-   :added "1.10.892"}
-  [magnitude sign]
-  ;; create a buffer large enough for 2 doubles
-  (let [a (js/ArrayBuffer. 16)
-        ;; represent the buffer as a double array
-        d (js/Float64Array. a)
-        ;; represent the buffer as bytes
-        b (js/Uint8Array. a)
-        ;; find the offset of the byte that holds the sign bit
-        sbyte (if little-endian? 7 0)]
-    ;; the first double holds the magnitude, the second holds the sign value
-    (aset d 0 magnitude)
-    (aset d 1 sign)
-    ;; read the sign bit from the sign value
-    (let [sign-sbyte (bit-and 0x80 (aget b (+ 8 sbyte)))
-          ;; read all the bits that aren't the sign bit in the same byte of the magnitude
-          mag-sbyte (bit-and 0x7F (aget b sbyte))]
-      ;; combine the sign bit from the sign value and the non-sign-bits from the magnitude value
-      ;; write it back into the byte in the magnitude
-      (aset b sbyte (bit-or sign-sbyte mag-sbyte))
-      ;; retrieve the full magnitude value with the updated byte
-      (aget d 0))))
-
-(def ^{:private true :const true}
-  two-to-the-52 0x10000000000000)
-
-(defn rint
-  {:doc "Returns the double closest to a and equal to a mathematical integer.
-  If two values are equally close, return the even one.
-  If a is ##NaN or ##Inf or ##-Inf or zero => a
-  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#rint-double-"
-   :added "1.10.892"}
-  [a]
-  (let [sign (copy-sign 1.0, a)
-        a (abs a)
-        a (if (< a two-to-the-52)
-            (- (+ two-to-the-52 a) two-to-the-52) a)]
-    (* sign a)))
-
 (comment
-  "TODO: Add IEEE-remainder
-  Based on Java code in java.base/share/native/libfdlibm/e_remainder.c
-  This gets words from the doubles which rely on platform endianness,
-  so detect this and create hi-word lo-word accordingly
-  (def a (js/ArrayBuffer. 8))
-  (def fa (js/Float64Array. a))
-  (def u8 (js/Uint8Array. a))
-  (def u32 (js/Uint32Array. a))
-  (def hi-word (aget u32 1))
-  (def lo-word (aget u32 0))")
+  (defn pr-buffer [x]
+    (let [a (js/ArrayBuffer. 8)
+          d (js/Float64Array. a)
+          b (js/Uint8Array. a)]
+      (aset d 0 x)
+      (str b))))
 
-(defn IEEE-remainder
-  {:doc "Returns the remainder per IEEE 754 such that
-    remainder = dividend - divisor * n
-  where n is the integer closest to the exact value of dividend / divisor.
-  If two integers are equally close, then n is the even one.
-  If the remainder is zero, sign will match dividend.
-  If dividend or divisor is ##NaN, or dividend is ##Inf or ##-Inf, or divisor is zero => ##NaN
-  If dividend is finite and divisor is infinite => dividend
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [dividend divisor] `(Math/IEEEremainder ~dividend ~divisor))
-   :added "1.10.892"}
-  ^double [^double dividend ^double divisor]
-  (Math/IEEEremainder dividend divisor))
