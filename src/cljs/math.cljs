@@ -127,8 +127,7 @@
    :inline-arities #{1}
    :inline (fn [a] `(Math/log ~a))
    :added "1.10.892"}
-  ^double [^double a]
-  (Math/log a))
+  [a] (Math/log a))
 
 (defn log10
   {:doc "Returns the logarithm (base 10) of a.
@@ -213,6 +212,17 @@
           (recur (dec ix) (bit-shift-left i 1)))))
     (- (bit-shift-right hx 20) 1023)))
 
+(defn setup-hl
+  {:doc "internal function to setup and align integer words"
+   :private true}
+  [i h l]
+  (if (>= i -1022)
+    [(bit-or 0x00100000 (bit-and 0x000fffff h)) l]
+    (let [n (- -1022 i)]
+      (if (<= n 31)
+        [(bit-or (bit-shift-left h n) (unsigned-bit-shift-right l (- 32 n))) (bit-shift-left l n)]
+        [(bit-shift-left l (- n 32)) 0]))))
+
 (defn IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
@@ -237,24 +247,62 @@
           lx (aget i LO-x)
           hy (aget i HI-y)
           ly (aget i LO-y)
-          sx (bit-and hx INT32-SIGN-BIT)      ;; capture the sign of x
-          hx (bit-xor hx sx)                  ;; set x to |x| using the sign
+          sx (bit-and hx INT32-SIGN-BIT) ;; capture the sign of x
+          hx (bit-xor hx sx) ;; set x to |x| using the sign
           hy (bit-and hy INT32-NON-SIGN-BITS) ;; set y to |y|
           hx<=hy (<= hx hy)]
       (cond
         ;; additional exception values
-        (and hx<=hy (or (< hx hy) (< lx ly))) x  ;; |x|<|y| return x
-        (and hy<=hy (= lx ly)) (aget Zero (bit-shift-right sx 31))  ;; |x|=|y| return x*0
+        (and hx<=hy (or (< hx hy) (< lx ly))) x ;; |x|<|y| return x
+        (and hy<=hy (= lx ly)) (aget Zero (bit-shift-right sx 31)) ;; |x|=|y| return x*0
 
         :default
         ;; determine ix = ilogb(x), iy = ilogb(y)
-        (let [ix (ilogb hx lx)
-              iy (ilogb hy ly)]
-          ;; TODO
-          ;; set up {hx,lx}, {hy,ly} and align y to x
-          ;; fix point fmod
-          ;; convert back to floating value and restore the sign
-          )))))
+        (try
+          (let [ix (ilogb hx lx)
+                iy (ilogb hy ly)
+                ;; set up {hx,lx}, {hy,ly} and align y to x
+                [hx lx] (setup-hl ix hx lx)
+                [hy ly] (setup-hl iy hy ly)
+                ;; fix point fmod
+                [hx lx] (loop [n (- iz iy) hx hx lx lx]
+                          (if (zero? n)
+                            [hx lx]
+                            (let [hz (if (< lx ly) (- hx hy 1) (- hz hy))
+                                  lz (- lx ly)
+                                  [hx lx] (if (< hz 0)
+                                            [(+ hx hx (unsigned-bit-shift-right lx 31)) (+ lx lx)]
+                                            (if (zero? (bit-or hz lz))
+                                              (throw (ex-info "Signed zero" {:zero true}))
+                                              [(+ hz hz (unsigned-bit-shift-right lz 31)) (+ lz lz)]))]
+                              (recur (dec n) hx lx))))
+                hz (if (< lx ly) (- hz hy 1) (- hx hy))
+                lz (- lx ly)
+                [hx lx] (if (>= hz 0) [hz lz] [hx lx])
+                _ (when (zero? (bit-or hx lx))
+                    (throw (ex-info "Signed zero" {:zero true})))
+                ;; convert back to floating value and restore the sign
+                [hx lx iy] (loop [hx hx lx lx iy iy]
+                             (if-not (< hx 0x00100000)
+                               [hx lx iy]
+                               (recur (+ hx hx (unsigned-right-shift lx 31)) (+ lx lx) (dec iy))))]
+            ;; use these high and low ints to update the double and return it
+            (if (>= iy -1022)
+              (let [hx (bit-or (- hx 0x00100000) (bit-shift-left (+ iy 1023) 20 ))]
+                (aset i HI-x (bit-or hx sx))
+                (aset i LO-x lx)
+                (aget d xpos))
+              (let [n (- -1022 iy)
+                    [hx lx] (cond
+                              (<= n 20) [(bit-shift-right hx n)
+                                         (bit-or (unsigned-bit-shift-right lx n) (bit-shift-left hx (- 32 n)))]
+                              (<= n 31) [sx
+                                         (bit-or (bit-shift-left hx (- 32 n)) (unsigned-bit-shift-right lx n))]
+                              :default [sx (bit-shift-right (- n 32))])]
+                (aset i HI-x (bit-or hx sx))
+                (aset i LO-x lx)
+                (* (aget d xpos) 1.0))))
+          (catch :default _ (aget Zero (unsigned-bit-shift-right sx 31))))))))
 
 (defn IEEE-remainder
   {:doc "Returns the remainder per IEEE 754 such that
@@ -541,46 +589,36 @@
   If d is ##Inf or ##-Inf => ##Inf
   If d is zero => Double/MIN_VALUE
   If d is +/- Double/MAX_VALUE => 2^971
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [d] `(Math/ulp ~d))
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#ulp-double-"
    :added "1.10.892"}
-  ^double [^double d]
-  (Math/ulp d))
+  [d]
+  (throw (ex-info "Unimplemented operation" {:op ulp})))
 
 (defn signum
   {:doc "Returns the signum function of d - zero for zero, 1.0 if >0, -1.0 if <0.
   If d is ##NaN => ##NaN
   If d is ##Inf or ##-Inf => d
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [d] `(Math/signum ~d))
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#signum-double-"
    :added "1.10.892"}
-  ^double [^double d]
-  (Math/signum d))
+  [d]
+  (throw (ex-info "Unimplemented operation" {:op signum})))
 
 (defn sinh
   {:doc "Returns the hyperbolic sine of x, (e^x - e^-x)/2.
   If x is ##NaN => ##NaN
   If x is ##Inf or ##-Inf or zero => x
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [x] `(Math/sinh ~x))
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sinh"
    :added "1.10.892"}
-  ^double [^double x]
-  (Math/sinh x))
+  [x] (Math/sinh x))
 
 (defn cosh
   {:doc "Returns the hyperbolic cosine of x, (e^x + e^-x)/2.
   If x is ##NaN => ##NaN
   If x is ##Inf or ##-Inf => ##Inf
   If x is zero => 1.0
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [x] `(Math/cosh ~x))
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/cosh"
    :added "1.10.892"}
-  ^double [^double x]
-  (Math/cosh x))
+  [x] (Math/cosh x))
 
 (defn tanh
   {:doc "Returns the hyperbolic tangent of x, sinh(x)/cosh(x).
@@ -588,23 +626,17 @@
   If x is zero => zero, with same sign
   If x is ##Inf => +1.0
   If x is ##-Inf => -1.0
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [x] `(Math/tanh ~x))
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/tanh"
    :added "1.10.892"}
-  ^double [^double x]
-  (Math/tanh x))
+  [x] (Math/tanh x))
 
 (defn hypot
   {:doc "Returns sqrt(x^2 + y^2) without intermediate underflow or overflow.
   If x or y is ##Inf or ##-Inf => ##Inf
   If x or y is ##NaN and neither is ##Inf or ##-Inf => ##NaN
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [x y] `(Math/hypot ~x ~y))
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/hypot"
    :added "1.10.892"}
-  ^double [^double x ^double y]
-  (Math/hypot x y))
+  [x y] (Math/hypot x y))
 
 (defn expm1
   {:doc "Returns e^x - 1. Near 0, expm1(x)+1 is more accurate to e^x than exp(x).
@@ -612,35 +644,28 @@
   If x is ##Inf => #Inf
   If x is ##-Inf => -1.0
   If x is zero => x
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [x] `(Math/expm1 ~x))
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/expm1"
    :added "1.10.892"}
-  ^double [^double x]
-  (Math/expm1 x))
+  [x] (Math/expm1 x))
 
 (defn log1p
   {:doc "Returns ln(1+x). For small values of x, log1p(x) is more accurate than
   log(1.0+x).
-  If x is ##NaN or < -1 => ##NaN
-  If x is ##Inf or ##-Inf or x => x
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [x] `(Math/log1p ~x))
+  If x is ##NaN or ##-Inf or < -1 => ##NaN
+  If x is -1 => ##-Inf
+  If x is ##Inf => ##Inf
+  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/log1p"
    :added "1.10.892"}
-  ^double [^double x]
-  (Math/log1p x))
+  [x] (Math/log1p x))
 
 (defn get-exponent
   {:doc "Returns the exponent of d.
   If d is ##NaN, ##Inf, ##-Inf => Double/MAX_EXPONENT + 1
   If d is zero or subnormal => Double/MIN_EXPONENT - 1
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [d] `(Math/getExponent ~d))
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#getExponent-double-"
    :added "1.10.892"}
-  [^double d]
-  (Math/getExponent d))
+  [d]
+  (throw (ex-info "Unimplemented operation" {:op get-exponent})))
 
 (defn next-after
   {:doc "Returns the adjacent floating point number to start in the direction of
@@ -653,36 +678,30 @@
     => Double/MAX_VALUE with same sign as start
   If start is equal to +=Double/MAX_VALUE and direction would cause a larger magnitude
     => ##Inf or ##-Inf with sign matching start
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{2}
-   :inline (fn [start direction] `(Math/nextAfter ~start ~direction))
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextAfter-double-double-"
    :added "1.10.892"}
-  ^double [^double start ^double direction]
-  (Math/nextAfter start direction))
+  [start direction]
+  (throw (ex-info "Unimplemented operation" {:op next-after})))
 
 (defn next-up
   {:doc "Returns the adjacent double of d in the direction of ##Inf.
   If d is ##NaN => ##NaN
   If d is ##Inf => ##Inf
   If d is zero => Double/MIN_VALUE
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [d] `(Math/nextUp ~d))
+  See: "
    :added "1.10.892"}
-  ^double [^double d]
-  (Math/nextUp d))
+  [d]
+  (throw (ex-info "Unimplemented operation" {:op next-up})))
 
 (defn next-down
   {:doc "Returns the adjacent double of d in the direction of ##-Inf.
   If d is ##NaN => ##NaN
   If d is ##Inf => ##-Inf
   If d is zero => Double/MIN_VALUE
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [d] `(Math/nextDown ~d))
+  See: "
    :added "1.10.892"}
-  ^double [^double d]
-  (Math/nextDown d))
+  [d]
+  (throw (ex-info "Unimplemented operation" {:op next-down})))
 
 (defn scalb
   {:doc "Returns d * 2^scaleFactor, scaling by a factor of 2. If the exponent
@@ -690,12 +709,10 @@
   If d is ##NaN => ##NaN
   If d is ##Inf or ##-Inf => ##Inf or ##-Inf respectively
   If d is zero => zero of same sign as d
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/"
-   :inline-arities #{1}
-   :inline (fn [d scaleFactor] `(Math/scalb ~d ~scaleFactor))
+  See: "
    :added "1.10.892"}
-  ^double [^double d scaleFactor]
-  (Math/scalb d scaleFactor))
+  [d scaleFactor]
+  (throw (ex-info "Unimplemented operation" {:op scalb})))
 
 (comment
   (defn pr-buffer [x]
