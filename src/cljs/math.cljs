@@ -48,6 +48,12 @@
 
 (def ^{:private true :const true} INT32-NON-SIGN-BITS 0x7FFFFFFF)
 
+;; rename the bit-shift operations for convenience in porting,
+;; and because shortening the code makes it a little easier to read
+(def << bit-shift-left)
+(def >> bit-shift-right)
+(def >>> unsigned-bit-shift-right)
+
 
 (defn sin
   {:doc "Returns the sine of an angle.
@@ -205,12 +211,12 @@
   (if (< hx 0x00100000) ;; subnormal
     (let [hx-zero? (= 0 hx)
           start-ix (if hx-zero? -1043 -1022)
-          start-i (if hx-zero? lx (bit-shift-left hx 11))]
+          start-i (if hx-zero? lx (<< hx 11))]
       (loop [ix start-ix i start-i]
         (if-not (> i 0)
           ix
-          (recur (dec ix) (bit-shift-left i 1)))))
-    (- (bit-shift-right hx 20) 1023)))
+          (recur (dec ix) (<< i 1)))))
+    (- (>> hx 20) 1023)))
 
 (defn setup-hl
   {:doc "internal function to setup and align integer words"
@@ -220,14 +226,14 @@
     [(bit-or 0x00100000 (bit-and 0x000fffff h)) l]
     (let [n (- -1022 i)]
       (if (<= n 31)
-        [(bit-or (bit-shift-left h n) (unsigned-bit-shift-right l (- 32 n))) (bit-shift-left l n)]
-        [(bit-shift-left l (- n 32)) 0]))))
+        [(bit-or (<< h n) (>>> l (- 32 n))) (<< l n)]
+        [(<< l (- n 32)) 0]))))
 
 (defn IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
   Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_fmod.c
-  bit-shift-left and bit-shift-right convert numbers to signed 32-bit
+  << and >> convert numbers to signed 32-bit
   Fortunately the values that are shifted are expected to be 32 bit signed."
    :private true}
   [x y]
@@ -255,7 +261,7 @@
       (cond
         ;; additional exception values
         (and hx<=hy (or (< hx hy) (< lx ly))) x ;; |x|<|y| return x
-        (and hy<=hy (= lx ly)) (aget Zero (bit-shift-right sx 31)) ;; |x|=|y| return x*0
+        (and hx<=hy (= lx ly)) (aget Zero (>> sx 31)) ;; |x|=|y| return x*0
 
         :default
         ;; determine ix = ilogb(x), iy = ilogb(y)
@@ -266,18 +272,18 @@
                 [hx lx] (setup-hl ix hx lx)
                 [hy ly] (setup-hl iy hy ly)
                 ;; fix point fmod
-                [hx lx] (loop [n (- iz iy) hx hx lx lx]
+                [hx lx] (loop [n (- ix iy) hx hx lx lx]
                           (if (zero? n)
                             [hx lx]
-                            (let [hz (if (< lx ly) (- hx hy 1) (- hz hy))
+                            (let [hz (if (< lx ly) (- hx hy 1) (- hx hy))
                                   lz (- lx ly)
                                   [hx lx] (if (< hz 0)
-                                            [(+ hx hx (unsigned-bit-shift-right lx 31)) (+ lx lx)]
+                                            [(+ hx hx (>>> lx 31)) (+ lx lx)]
                                             (if (zero? (bit-or hz lz))
                                               (throw (ex-info "Signed zero" {:zero true}))
-                                              [(+ hz hz (unsigned-bit-shift-right lz 31)) (+ lz lz)]))]
+                                              [(+ hz hz (>>> lz 31)) (+ lz lz)]))]
                               (recur (dec n) hx lx))))
-                hz (if (< lx ly) (- hz hy 1) (- hx hy))
+                hz (if (< lx ly) (- hx hy 1) (- hx hy))
                 lz (- lx ly)
                 [hx lx] (if (>= hz 0) [hz lz] [hx lx])
                 _ (when (zero? (bit-or hx lx))
@@ -286,24 +292,24 @@
                 [hx lx iy] (loop [hx hx lx lx iy iy]
                              (if-not (< hx 0x00100000)
                                [hx lx iy]
-                               (recur (+ hx hx (unsigned-right-shift lx 31)) (+ lx lx) (dec iy))))]
+                               (recur (+ hx hx (unsigned-bit-shift-right lx 31)) (+ lx lx) (dec iy))))]
             ;; use these high and low ints to update the double and return it
             (if (>= iy -1022)
-              (let [hx (bit-or (- hx 0x00100000) (bit-shift-left (+ iy 1023) 20 ))]
+              (let [hx (bit-or (- hx 0x00100000) (<< (+ iy 1023) 20 ))]
                 (aset i HI-x (bit-or hx sx))
                 (aset i LO-x lx)
                 (aget d xpos))
               (let [n (- -1022 iy)
                     [hx lx] (cond
-                              (<= n 20) [(bit-shift-right hx n)
-                                         (bit-or (unsigned-bit-shift-right lx n) (bit-shift-left hx (- 32 n)))]
+                              (<= n 20) [(>> hx n)
+                                         (bit-or (>>> lx n) (<< hx (- 32 n)))]
                               (<= n 31) [sx
-                                         (bit-or (bit-shift-left hx (- 32 n)) (unsigned-bit-shift-right lx n))]
-                              :default [sx (bit-shift-right (- n 32))])]
+                                         (bit-or (<< hx (- 32 n)) (>>> lx n))]
+                              :default [sx (>> (- n 32))])]
                 (aset i HI-x (bit-or hx sx))
                 (aset i LO-x lx)
                 (* (aget d xpos) 1.0))))
-          (catch :default _ (aget Zero (unsigned-bit-shift-right sx 31))))))))
+          (catch :default _ (aget Zero (>>> sx 31))))))))
 
 (defn IEEE-remainder
   {:doc "Returns the remainder per IEEE 754 such that
@@ -344,7 +350,7 @@
             hp (aget i (+ HI 2))
             lp (aget i (+ LO 2))
             ;; sx is the sign bit
-            sx (bit-and INT32-SIGN-BIT)
+            sx (bit-and hx INT32-SIGN-BIT)
             ;; strip the sign bit from hp and hx
             hp (bit-and hp INT32-NON-SIGN-BITS)
             hx (bit-and hx INT32-NON-SIGN-BITS)
@@ -352,7 +358,7 @@
             ;;make x < 2p
             dividend (if (<= hp 0x7FDFFFFF) (IEEE-fmod dividend (+ divisor divisor)) dividend)]
         (if (zero? (bit-or (- hx hp) (- lx lp)))
-          (* 0.0 x)
+          (* 0.0 dividend)
           ;; convert dividend and divisor to absolute values. 
           (let [dividend (bit-and dividend INT32-NON-SIGN-BITS)
                 divisor (bit-and divisor INT32-NON-SIGN-BITS)
@@ -369,7 +375,7 @@
                            (let [divisor-half (* 0.5 divisor)]
                              (if (> dividend divisor-half)
                                (let [dividend (- dividend divisor)] ;; reduce the dividend
-                                 (if (>= dividend dividor-half) ;; still larger than half divisor
+                                 (if (>= dividend divisor-half) ;; still larger than half divisor
                                    (- dividend divisor) ;; reduce again
                                    dividend))
                                dividend)))]
@@ -442,7 +448,7 @@
    :added "1.10.892"}
   [a]
   (let [sign (copy-sign 1.0, a)
-        a (abs a)
+        a (Math/abs a)
         a (if (< a two-to-the-52)
             (- (+ two-to-the-52 a) two-to-the-52) a)]
     (* sign a)))
@@ -566,7 +572,7 @@
    :added "1.10.892"}
   [a] (Math/abs a))
 
-(defn max
+#_(defn max
   {:doc "Returns the greater of a or b.
   If a or b is ##NaN => ##NaN
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/max"
@@ -574,7 +580,7 @@
   [a b]
   (Math/max a b))
 
-(defn min
+#_(defn min
   {:doc "Returns the lesser of a or b.
   If a or b is ##NaN => ##NaN
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min"
