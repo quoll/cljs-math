@@ -198,7 +198,7 @@
     d))
 
 (def ^{:private true :const true} xpos 0)
-(def ^{:private true :const true} ypos 1)
+(def ^{:private true :const true} ypos 2)
 (def ^{:private true} HI-x (+ xpos HI))
 (def ^{:private true} LO-x (+ xpos LO))
 (def ^{:private true} HI-y (+ ypos HI))
@@ -292,7 +292,7 @@
                 [hx lx iy] (loop [hx hx lx lx iy iy]
                              (if-not (< hx 0x00100000)
                                [hx lx iy]
-                               (recur (+ hx hx (unsigned-bit-shift-right lx 31)) (+ lx lx) (dec iy))))]
+                               (recur (+ hx hx (>>> lx 31)) (+ lx lx) (dec iy))))]
             ;; use these high and low ints to update the double and return it
             (if (>= iy -1022)
               (let [hx (bit-or (- hx 0x00100000) (<< (+ iy 1023) 20 ))]
@@ -379,7 +379,7 @@
                                    (- dividend divisor) ;; reduce again
                                    dividend))
                                dividend)))]
-            ;; update the buffer with the nex dividend value
+            ;; update the buffer with the new dividend value
             (aset d 0 dividend)
             ;; calculate a new hi int for the dividend using the saved sign bit
             (let [hx (bit-xor (aget i HI) sx)]
