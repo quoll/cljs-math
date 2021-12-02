@@ -229,6 +229,17 @@
         [(bit-or (<< h n) (>>> l (- 32 n))) (<< l n)]
         [(<< l (- n 32)) 0]))))
 
+(defn u<
+  {:doc "unsigned less-than comparator for 32-bit values"
+   :private true}
+  [a b]
+  ;; compare the top nybble
+  (let [ab (>>> a 28)
+        bb (>>> b 28)]
+    (or (< ab bb)  ;; if the top nybble of a is less then the whole value is less
+        (and (= ab bb)  ;; if the top nybble is equal then compare the remaining bits of both
+             (< (bit-and a 0x0fffffff) (bit-and b 0x0fffffff))))))
+
 (defn IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
@@ -275,7 +286,7 @@
                 [hx lx] (loop [n (- ix iy) hx hx lx lx]
                           (if (zero? n)
                             [hx lx]
-                            (let [hz (if (< lx ly) (- hx hy 1) (- hx hy))
+                            (let [hz (if (u< lx ly) (- hx hy 1) (- hx hy))
                                   lz (- lx ly)
                                   [hx lx] (if (< hz 0)
                                             [(+ hx hx (>>> lx 31)) (+ lx lx)]
@@ -283,7 +294,7 @@
                                               (throw (ex-info "Signed zero" {:zero true}))
                                               [(+ hz hz (>>> lz 31)) (+ lz lz)]))]
                               (recur (dec n) hx lx))))
-                hz (if (< lx ly) (- hx hy 1) (- hx hy))
+                hz (if (u< lx ly) (- hx hy 1) (- hx hy))
                 lz (- lx ly)
                 [hx lx] (if (>= hz 0) [hz lz] [hx lx])
                 _ (when (zero? (bit-or hx lx))

@@ -114,13 +114,17 @@
            ly = 0;
          }
        }
-
+       var ult = function(a,b) {
+                   var ab = (a >>> 28); var bb = (b >>> 28);
+                   return (ab < bb) || ((ab == bb) && (a & 0x0FFFFFFF) < (b & 0x0FFFFFFF)); }
        /* fix point fmod */
        n = ix - iy;
+       var hz = 0;
+       var lz = 0;
        while (n--) {
          hz = hx - hy;
          lz = lx - ly;
-         if (lx < ly) hz -= 1;
+         if (ult(lx, ly)) hz -= 1;
          if (hz < 0) {
            hx = hx + hx + (lx >>> 31);
            lx = lx + lx;
@@ -133,10 +137,10 @@
        }
        hz = hx - hy;
        lz = lx - ly;
-       if (lx < ly) hz -= 1;
+       if (ult(lx, ly)) hz -= 1;
        if (hz >= 0) {
          hx = hz;
-         lx= lz;
+         lx = lz;
        }
 
        /* convert back to floating value and restore the sign */
