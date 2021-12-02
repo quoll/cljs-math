@@ -370,8 +370,8 @@
         (if (zero? (bit-or (- hx hp) (- lx lp)))
           (* 0.0 dividend)
           ;; convert dividend and divisor to absolute values. 
-          (let [dividend (bit-and dividend INT32-NON-SIGN-BITS)
-                divisor (bit-and divisor INT32-NON-SIGN-BITS)
+          (let [dividend (Math/abs dividend)
+                divisor (Math/abs divisor)
                 ;; reduce dividend within range of the divisor
                 dividend (if (< hp 0x00200000)
                            ;; smaller divisor compare 2*dividend to the divisor

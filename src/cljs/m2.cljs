@@ -199,7 +199,6 @@
             (((hp - 0x7ff00000) | lp) != 0)))
          return (x * p) / (x * p);
 
-
        if (hp <= 0x7fdfffff) x = ieee754_fmod(x, p + p);  /* now x < 2p */
        if (((hx - hp) | (lx - lp)) == 0) return 0.0 * x;
        x  = Math.abs(x);
