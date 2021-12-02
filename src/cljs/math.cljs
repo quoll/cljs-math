@@ -34,6 +34,14 @@
 
 (def ^{:private true :const true} EXP_BITMASK32 0x7FF00000)
 
+(def ^{:private true :const true} EXP_MAX EXP_BIAS)
+
+(def ^{:private true :const true} EXP_MIN -1022)
+
+(def ^{:const true} MIN_FLOAT_VALUE 5e-324) ;; bit representation of 0x0000000000000001
+
+(def ^{:const true} MAX_FLOAT_VALUE 1.7976931348623157e+308) ;; bit representation of 0x7FEFFFFFFFFFFFFF
+
 (defn get-little-endian
   "Tests the platform for endianness. Returns true when little-endian, false otherwise."
   []
@@ -605,6 +613,46 @@
   (Math/min p0 p1))
 
 
+(defn get-exponent
+  {:doc "Returns the exponent of d.
+  If d is ##NaN, ##Inf, ##-Inf => Double/MAX_EXPONENT + 1
+  If d is zero or subnormal => Double/MIN_EXPONENT - 1
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#getExponent-double-"
+   :added "1.10.892"}
+  [d]
+  (cond
+    (or (js/Number.isNaN d) (not (js/Number.isFinite d))) (inc EXP_MAX)
+    (zero? d) (dec EXP_MIN)
+    :default (let [a (js/ArrayBuffer. 8)
+                   f (js/Float64Array. a)
+                   i (js/Uint32Array. a)
+                   hi (if little-endian? 1 0)]
+               (aset f 0 d)
+               (let [hd (aget i hi)]
+                 (if (< hd 0x00100000) ;; subnormal
+                   EXP_ZERO
+                   (- (>> (bit-and hd EXP_BITMASK32) (dec SIGNIFICAND_WIDTH32)) EXP_BIAS))))))
+
+(defn hi-lo->double
+  {:doc "Converts a pair of 32 bit integers into an IEEE-754 64 bit floating point number.
+  h is the high 32 bits, l is the low 32 bits."
+   :private true}
+  [h l]
+  (let [a (js/ArrayBuffer. 8)
+        f (js/Float64Array. a)
+        i (js/Uint32Array. a)]
+    (aset i LO l)
+    (aset i HI h)
+    (aget d 0)))
+
+(defn power-of-two
+  {:doc "returns a floating point power of two in the normal range"
+   :private true}
+  [n]
+  (assert (and (>= n EXP_MIN) (<= EXP_MAX)))
+  (hi-lo->double
+   (bit-and (<< (+ n EXP_BIAS) (dec SIGNIFICAND_WIDTH32)) EXP_BITMASK32) 0))
+
 (defn ulp
   {:doc "Returns the size of an ulp (unit in last place) for d.
   If d is ##NaN => ##NaN
@@ -614,8 +662,17 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#ulp-double-"
    :added "1.10.892"}
   [d]
-  ;; TODO
-  (throw (ex-info "Unimplemented operation" {:op ulp})))
+  (let [e (get-exponent d)]
+    (case e
+      1024 (abs d)  ;; EXP_MAX + 1
+      -1023 MIN_FLOAT_VALUE  ;; EXP_MIN - 1
+      (let [e (- e (+ 31 SIGNIFICAND_WIDTH32))]  ;; SIGNIFICAND_WIDTH64 -1
+        (if (>= e EXP_MIN)
+          (power-of-two exp)
+          (let [shift (- exp (- EXP_MIN 31 SIGNIFICAND_WIDTH32))]
+            (if (< shift 32)
+              (hi-lo->double 0 (<< 1 shift))
+              (hi-lo->double (<< 1 (- shift 32)) 0))))))))
 
 (defn signum
   {:doc "Returns the signum function of d - zero for zero, 1.0 if >0, -1.0 if <0.
@@ -624,8 +681,9 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#signum-double-"
    :added "1.10.892"}
   [d]
-  ;; TODO
-  (throw (ex-info "Unimplemented operation" {:op signum})))
+  (if (or (= 0.0 d) (js/Number.isNaN d) (not (js/Number.isFinite d)))
+    d
+    (copy-sign 1.0 d)))
 
 (defn sinh
   {:doc "Returns the hyperbolic sine of x, (e^x - e^-x)/2.
@@ -682,26 +740,6 @@
    :added "1.10.892"}
   [x] (Math/log1p x))
 
-(defn get-exponent
-  {:doc "Returns the exponent of d.
-  If d is ##NaN, ##Inf, ##-Inf => Double/MAX_EXPONENT + 1
-  If d is zero or subnormal => Double/MIN_EXPONENT - 1
-  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#getExponent-double-"
-   :added "1.10.892"}
-  [d]
-  (cond
-    (or (js/Number.isNaN d) (not (js/Number.isFinite d))) (inc EXP_BIAS) 
-    (zero? d) (- 1 EXP_BIAS)
-    :default (let [a (js/ArrayBuffer. 8)
-                   f (js/Float64Array. a)
-                   i (js/Uint32Array. a)
-                   hi (if little-endian? 1 0)]
-               (aset f 0 d)
-               (let [hd (aget i hi)]
-                 (if (< hd 0x00100000) ;; subnormal
-                   (- EXP_BIAS 1)
-                   (- (>> (bit-and hd EXP_BITMASK32) (dec SIGNIFICAND_WIDTH32)) EXP_BIAS))))))
-
 (defn next-after
   {:doc "Returns the adjacent floating point number to start in the direction of
   the second argument. If the arguments are equal, the second is returned.
@@ -716,8 +754,17 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextAfter-double-double-"
    :added "1.10.892"}
   [start direction]
-  ;; TODO
-  (throw (ex-info "Unimplemented operation" {:op next-after})))
+  ; Branch to descending case first as it is more costly than ascending
+  ; case due to start != 0.0f conditional.
+  (let [a (js/ArrayBuffer. 8)
+        f (js/Float64Array. a)
+        i (js/Uint32Array. a)]
+    (aset f 0 start)
+    (cond
+      (> start direction) (if-not (= start 0.0)
+                            (let [hiw (aget i HI)
+                                  low (aget i LO)]))
+      )))
 
 (defn next-up
   {:doc "Returns the adjacent double of d in the direction of ##Inf.
@@ -741,14 +788,32 @@
   ;; TODO
   (throw (ex-info "Unimplemented operation" {:op next-down})))
 
+(def ^:private MAX_SCALE (+ EXP_MAX (- EXP_MIN) SIGNIFICAND_WIDTH32 32 1))
+
+(def ^:private two-to-the-double-scale-up (power-of-two 512))
+
+(def ^:private two-to-the-double-scale-down (power-of-two -512))
+
 (defn scalb
   {:doc "Returns d * 2^scaleFactor, scaling by a factor of 2. If the exponent
   is between Double/MIN_EXPONENT and Double/MAX_EXPONENT, the answer is exact.
+  scaleFactor is an integer
   If d is ##NaN => ##NaN
   If d is ##Inf or ##-Inf => ##Inf or ##-Inf respectively
   If d is zero => zero of same sign as d
-  See: "
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextDown-double-"
    :added "1.10.892"}
   [d scaleFactor]
-  ;; TODO
-  (throw (ex-info "Unimplemented operation" {:op scalb})))
+  (let [[scale-factor
+         scale-increment
+         exp-delta] (if (< scaleFactor 0)
+                      [(Math/max scaleFactor (- MAX_SCALE)) -512 two-to-the-double-scale-down]
+                      [(Math/min scaleFactor MAX_SCALE) 512 two-to-the-double-scale-up])
+        ;; Calculate (scaleFactor % +/-512), 512 = 2^9
+        ;; technique from "Hacker's Delight" section 10-2
+        t (>>> (>> scale-factor 8) 23)
+        exp-adjust (- (bit-and (+ scale-factor t) 511) t)]
+    (loop [d (* d (power-of-two exp-adjust)) scale-factor (- scale-factor exp-adjust)]
+      (if (zero? scale-factor)
+        d
+        (recur (* d exp-delta) (- scale-factor scale-increment))))))
