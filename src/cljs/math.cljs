@@ -28,6 +28,12 @@
 
 (def ^{:private true :const true} two-to-the-52 0x10000000000000)
 
+(def ^{:private true :const true} SIGNIFICAND_WIDTH32 21)
+
+(def ^{:private true :const true} EXP_BIAS 1023)
+
+(def ^{:private true :const true} EXP_BITMASK32 0x7FF00000)
+
 (defn get-little-endian
   "Tests the platform for endianness. Returns true when little-endian, false otherwise."
   []
@@ -599,8 +605,6 @@
   (Math/min p0 p1))
 
 
-;; TODO below here
-
 (defn ulp
   {:doc "Returns the size of an ulp (unit in last place) for d.
   If d is ##NaN => ##NaN
@@ -610,6 +614,7 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#ulp-double-"
    :added "1.10.892"}
   [d]
+  ;; TODO
   (throw (ex-info "Unimplemented operation" {:op ulp})))
 
 (defn signum
@@ -619,6 +624,7 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#signum-double-"
    :added "1.10.892"}
   [d]
+  ;; TODO
   (throw (ex-info "Unimplemented operation" {:op signum})))
 
 (defn sinh
@@ -683,7 +689,18 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#getExponent-double-"
    :added "1.10.892"}
   [d]
-  (throw (ex-info "Unimplemented operation" {:op get-exponent})))
+  (cond
+    (or (js/Number.isNaN d) (not (js/Number.isFinite d))) (inc EXP_BIAS) 
+    (zero? d) (- 1 EXP_BIAS)
+    :default (let [a (js/ArrayBuffer. 8)
+                   f (js/Float64Array. a)
+                   i (js/Uint32Array. a)
+                   hi (if little-endian? 1 0)]
+               (aset f 0 d)
+               (let [hd (aget i hi)]
+                 (if (< hd 0x00100000) ;; subnormal
+                   (- EXP_BIAS 1)
+                   (- (>> (bit-and hd EXP_BITMASK32) (dec SIGNIFICAND_WIDTH32)) EXP_BIAS))))))
 
 (defn next-after
   {:doc "Returns the adjacent floating point number to start in the direction of
@@ -699,6 +716,7 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextAfter-double-double-"
    :added "1.10.892"}
   [start direction]
+  ;; TODO
   (throw (ex-info "Unimplemented operation" {:op next-after})))
 
 (defn next-up
@@ -709,6 +727,7 @@
   See: "
    :added "1.10.892"}
   [d]
+  ;; TODO
   (throw (ex-info "Unimplemented operation" {:op next-up})))
 
 (defn next-down
@@ -719,6 +738,7 @@
   See: "
    :added "1.10.892"}
   [d]
+  ;; TODO
   (throw (ex-info "Unimplemented operation" {:op next-down})))
 
 (defn scalb
@@ -730,13 +750,5 @@
   See: "
    :added "1.10.892"}
   [d scaleFactor]
+  ;; TODO
   (throw (ex-info "Unimplemented operation" {:op scalb})))
-
-(comment
-  (defn pr-buffer [x]
-    (let [a (js/ArrayBuffer. 8)
-          d (js/Float64Array. a)
-          b (js/Uint8Array. a)]
-      (aset d 0 x)
-      (str b))))
-
