@@ -40,8 +40,7 @@
   Reimplements __ieee754_fmod from the JDK.
   Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_fmod.c
   << and >> convert numbers to signed 32-bit
-  Fortunately the values that are shifted are expected to be 32 bit signed."
-   :private true}
+  Fortunately the values that are shifted are expected to be 32 bit signed."}
   [x y]
   ((js*
     "function(x, y, HI, LO, Zero) {

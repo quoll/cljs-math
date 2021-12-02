@@ -198,11 +198,11 @@
     d))
 
 (def ^{:private true :const true} xpos 0)
-(def ^{:private true :const true} ypos 2)
-(def ^{:private true} HI-x (+ xpos HI))
-(def ^{:private true} LO-x (+ xpos LO))
-(def ^{:private true} HI-y (+ ypos HI))
-(def ^{:private true} LO-y (+ ypos LO))
+(def ^{:private true :const true} ypos 1)
+(def ^{:private true} HI-x (+ (* 2 xpos) HI))
+(def ^{:private true} LO-x (+ (* 2 xpos) LO))
+(def ^{:private true} HI-y (+ (* 2 ypos) HI))
+(def ^{:private true} LO-y (+ (* 2 ypos) LO))
 
 (defn ilogb
   {:doc "internal function for ilogb(x)"
@@ -245,8 +245,7 @@
   Reimplements __ieee754_fmod from the JDK.
   Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_fmod.c
   << and >> convert numbers to signed 32-bit
-  Fortunately the values that are shifted are expected to be 32 bit signed."
-   :private true}
+  Fortunately the values that are shifted are expected to be 32 bit signed."}
   [x y]
   ;; return exception values
   (if (or (zero? y) (js/Number.isNaN y) (not (js/Number.isFinite x)))
@@ -320,7 +319,7 @@
                 (aset i HI-x (bit-or hx sx))
                 (aset i LO-x lx)
                 (* (aget d xpos) 1.0))))
-          (catch :default _ (aget Zero (>>> sx 31))))))))
+          (catch :default e (println e) (println (ex-data e)) (aget Zero (>>> sx 31))))))))
 
 (defn IEEE-remainder
   {:doc "Returns the remainder per IEEE 754 such that
@@ -394,7 +393,7 @@
             (aset d 0 dividend)
             ;; calculate a new hi int for the dividend using the saved sign bit
             (let [hx (bit-xor (aget i HI) sx)]
-              ;; set the dividend with this new sign nit
+              ;; set the dividend with this new sign bit
               (aset i HI hx)
               ;; retrieve the updated dividend
               (aget d 0))))))))
