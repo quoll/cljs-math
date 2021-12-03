@@ -362,6 +362,7 @@
     (zero? divisor) ##NaN
     (js/Number.isNaN divisor) ##NaN
     ;; check if dividend is ##Inf ##-Inf or ##NaN
+    (js/Number.isNaN dividend) ##NaN
     (not (js/Number.isFinite dividend)) ##NaN
     ;; dividend is finish, check if divisor is infinite
     (not (js/Number.isFinite divisor)) dividend

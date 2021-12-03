@@ -4,7 +4,8 @@
             [clojure.test.check :as tc]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop]))
+            [clojure.test.check.properties :as prop])
+  (:import [clojure.lang ExceptionInfo]))
 
 (defn hex2
   [n]
@@ -57,3 +58,11 @@
 (defspec ieee-remainder-test 100
   (prop/for-all [dividend gen/double divisor gen/double]
     (d= (m/IEEE-remainder dividend divisor) (Math/IEEEremainder dividend divisor))))
+
+(defspec ceil-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/ceil v) (Math/ceil v))))
+
+(deftest ceil-null-test
+  (is (thrown? Exception (Math/ceil nil)))
+  (is (thrown? ExceptionInfo (m/ceil nil))))
