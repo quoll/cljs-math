@@ -630,7 +630,7 @@
                (aset f 0 d)
                (let [hd (aget i hi)]
                  (if (< hd 0x00100000) ;; subnormal
-                   EXP_ZERO
+                   EXP_MIN
                    (- (>> (bit-and hd EXP_BITMASK32) (dec SIGNIFICAND_WIDTH32)) EXP_BIAS))))))
 
 (defn hi-lo->double
@@ -643,7 +643,7 @@
         i (js/Uint32Array. a)]
     (aset i LO l)
     (aset i HI h)
-    (aget d 0)))
+    (aget f 0)))
 
 (defn power-of-two
   {:doc "returns a floating point power of two in the normal range"
@@ -817,7 +817,7 @@
           f (js/Float64Array. a)
           i (js/Uint32Array. a)
           ;; Add +0.0 to get rid of a -0.0 (+0.0 + -0.0 => +0.0)
-          _ (aset f 0 (+ start 0.0))
+          _ (aset f 0 (+ d 0.0))
           ht (aget i HI)
           lt (aget i LO)
           [hr lr] (if (>= ht 0)
