@@ -1,6 +1,10 @@
 (ns cljs.jmath-test
   (:require [cljs.math :as m]
-            [clojure.test :refer [deftest is testing run-tests]]))
+            [clojure.test :refer [deftest is testing run-tests]]
+            [clojure.test.check :as tc]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]))
 
 (defn hex2
   [n]
@@ -24,7 +28,7 @@
       (is (= "bf27dae7fd100000" (buffer-str c))))))
 
 (deftest test-remainder
-  (testing "The JS remainder function"
+  (testing "The remainder function"
     (let [a (m/IEEE-fmod 5.2 2.3)
           b (m/IEEE-remainder 339794.000868 1.69897000343)
           c (m/IEEE-remainder -339794.000868 1.69897000343)]
@@ -35,3 +39,21 @@
       (is (= -0.00018199998751811108 c))
       (is (= "bf27dae7fd100000" (buffer-str c))))))
 
+(defn d= [a b] (or (= a b) (and (Double/isNaN a) (Double/isNaN b))))
+
+(defspec sin-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/sin v) (Math/sin v))))
+
+
+(defspec to-radians-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/to-radians v) (Math/toRadians v))))
+
+(defspec to-degrees-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/to-degrees v) (Math/toDegrees v))))
+
+(defspec ieee-remainder-test 100
+  (prop/for-all [dividend gen/double divisor gen/double]
+    (d= (m/IEEE-remainder dividend divisor) (Math/IEEEremainder dividend divisor))))

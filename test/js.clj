@@ -2,7 +2,7 @@
             testing purposes"
       :author "Paula Gearon"}
     js
-  (:refer-clojure :exclude [aset aget])
+  (:refer-clojure :exclude [aset aget +])
   (:import [java.nio ByteBuffer IntBuffer DoubleBuffer]))
 
 (def Number.MAX_SAFE_INTEGER  9007199254740991)
@@ -103,3 +103,25 @@
 (defn >>>
   [n s]
   (unsigned-bit-shift-right (bit-and 0xffffffff n) s))
+
+(def INT_MASK 0xFFFFFFFF)
+
+(defn as-int
+  [x]
+  (let [x (bit-and INT_MASK x)]
+    (if (zero? (bit-and 0x80000000 x))
+      x
+      (bit-or -0x100000000 x))))
+
+(defn add-int
+  [a b]
+  (unchecked-add-int
+   (as-int a)
+   (as-int b)))
+
+(defn +
+  ([] 0)
+  ([x] x)
+  ([x y] (add-int x y))
+  ([x y & xs] 
+   (reduce add-int (add-int x y) xs)))

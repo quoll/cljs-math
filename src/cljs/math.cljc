@@ -2,8 +2,8 @@
       :author "Paula Gearon" }
     cljs.math
   ;; create space to load this in Clojure for testing
-  #?@(:clj ((:refer-clojure :exclude [aset aget])
-            (:require [js :refer [aset aget]])
+  #?@(:clj ((:refer-clojure :exclude [aset aget +])
+            (:require [js :refer [aset aget +]])
             (:import [js ArrayBuffer Uint8Array Uint32Array Float64Array]))))
 
 (def
@@ -82,6 +82,10 @@
     (or (< ab bb)  ;; if the top nybble of a is less then the whole value is less
         (and (= ab bb)  ;; if the top nybble is equal then compare the remaining bits of both
              (< (bit-and a 0x0fffffff) (bit-and b 0x0fffffff))))))
+
+;; This is to distinguish between integer addition and doubles addition
+;; Integer addition has to be made unchecked under Clojure
+(def d+ clojure.core/+)
 
 (defn sin
   {:doc "Returns the sine of an angle.
@@ -313,6 +317,7 @@
                 hz (if (u< lx ly) (- hx hy 1) (- hx hy))
                 lz (- lx ly)
                 [hx lx] (if (>= hz 0) [hz lz] [hx lx])
+
                 _ (when (zero? (bit-or hx lx))
                     (throw (ex-info "Signed zero" {:zero true})))
                 ;; convert back to floating value and restore the sign
@@ -336,7 +341,7 @@
                 (aset i HI-x (bit-or hx sx))
                 (aset i LO-x lx)
                 (* (aget d xpos) 1.0))))
-          (catch #?(:clj Exception :cljs :default) e (println e) (println (ex-data e)) (aget Zero (>>> sx 31))))))))
+          (catch #?(:clj Exception :cljs :default) _ (aget Zero (>>> sx 31))))))))
 
 (defn IEEE-remainder
   {:doc "Returns the remainder per IEEE 754 such that
@@ -383,7 +388,7 @@
             hx (bit-and hx INT32_NON_SIGN_BITS)
 
             ;;make x < 2p
-            dividend (if (<= hp 0x7FDFFFFF) (IEEE-fmod dividend (+ divisor divisor)) dividend)]
+            dividend (if (<= hp 0x7FDFFFFF) (IEEE-fmod dividend (d+ divisor divisor)) dividend)]
         (if (zero? (bit-or (- hx hp) (- lx lp)))
           (* 0.0 dividend)
           ;; convert dividend and divisor to absolute values. 
@@ -392,9 +397,9 @@
                 ;; reduce dividend within range of the divisor
                 dividend (if (< hp 0x00200000)
                            ;; smaller divisor compare 2*dividend to the divisor
-                           (if (> (+ dividend dividend) divisor)
+                           (if (> (d+ dividend dividend) divisor)
                              (let [dividend (- dividend divisor)] ;; reduce the dividend
-                               (if (>= (+ dividend dividend) divisor) ;; 2*dividend still larger
+                               (if (>= (d+ dividend dividend) divisor) ;; 2*dividend still larger
                                  (- dividend divisor) ;; reduce again
                                  dividend))
                              dividend)
@@ -794,7 +799,7 @@
                             (- MIN_FLOAT_VALUE))
       ;; Add +0.0 to get rid of a -0.0 (+0.0 + -0.0 => +0.0)
       ;; then bitwise convert start to integer
-      (< start direction) (let [_ (aset f 0 (+ start 0.0))
+      (< start direction) (let [_ (aset f 0 (d+ start 0.0))
                                 ht (aget i HI)
                                 lt (aget i LO)
                                 [hr lr] (if (>= ht 0)
@@ -820,7 +825,7 @@
           f (js/Float64Array. a)
           i (js/Uint32Array. a)
           ;; Add +0.0 to get rid of a -0.0 (+0.0 + -0.0 => +0.0)
-          _ (aset f 0 (+ d 0.0))
+          _ (aset f 0 (d+ d 0.0))
           ht (aget i HI)
           lt (aget i LO)
           [hr lr] (if (>= ht 0)
