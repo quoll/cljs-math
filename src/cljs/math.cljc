@@ -1,6 +1,10 @@
 (ns ^{:doc "ClojureScript wrapper functions for math operations"
       :author "Paula Gearon" }
-  cljs.math)
+    cljs.math
+  ;; create space to load this in Clojure for testing
+  #?@(:clj ((:refer-clojure :exclude [aset aget])
+            (:require [js :refer [aset aget]])
+            (:import [js ArrayBuffer Uint8Array Uint32Array Float64Array]))))
 
 (def
   ^{:doc "Constant for Euler's number e, the base for natural logarithms.
@@ -45,10 +49,10 @@
 (defn get-little-endian
   "Tests the platform for endianness. Returns true when little-endian, false otherwise."
   []
-  (let [a (js/ArrayBuffer. 2)
-        l (js/Uint16Array. a)
+  (let [a (js/ArrayBuffer. 4)
+        i (js/Uint32Array. a)
         b (js/Uint8Array. a)]
-    (aset l 0 0xff00)
+    (aset i 0 0x33221100)
     (= 0 (aget b 0))))
 
 (defonce ^:private little-endian? (get-little-endian))
@@ -64,10 +68,20 @@
 
 ;; rename the bit-shift operations for convenience in porting,
 ;; and because shortening the code makes it a little easier to read
-(def << bit-shift-left)
-(def >> bit-shift-right)
-(def >>> unsigned-bit-shift-right)
+(def << #?(:cljs bit-shift-left :clj js/<<))
+(def >> #?(:cljs bit-shift-right :clj js/>>))
+(def >>> #?(:cljs unsigned-bit-shift-right :clj js/>>>))
 
+(defn u<
+  {:doc "unsigned less-than comparator for 32-bit values"
+   :private true}
+  [a b]
+  ;; compare the top nybble
+  (let [ab (>>> a 28)
+        bb (>>> b 28)]
+    (or (< ab bb)  ;; if the top nybble of a is less then the whole value is less
+        (and (= ab bb)  ;; if the top nybble is equal then compare the remaining bits of both
+             (< (bit-and a 0x0fffffff) (bit-and b 0x0fffffff))))))
 
 (defn sin
   {:doc "Returns the sine of an angle.
@@ -207,7 +221,7 @@
     (aset d 0 0.0)
     (aset d 1 0.0)
     ;; update the sign bit on the second double
-    (aset b (if little-endian? 15 8) 0x80)
+    (aset b (if little-endian? 15 8) -0x80)
     ;; save the array of 2 doubles [0.0, -0.0]
     d))
 
@@ -243,17 +257,6 @@
         [(bit-or (<< h n) (>>> l (- 32 n))) (<< l n)]
         [(<< l (- n 32)) 0]))))
 
-(defn u<
-  {:doc "unsigned less-than comparator for 32-bit values"
-   :private true}
-  [a b]
-  ;; compare the top nybble
-  (let [ab (>>> a 28)
-        bb (>>> b 28)]
-    (or (< ab bb)  ;; if the top nybble of a is less then the whole value is less
-        (and (= ab bb)  ;; if the top nybble is equal then compare the remaining bits of both
-             (< (bit-and a 0x0fffffff) (bit-and b 0x0fffffff))))))
-
 (defn IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
@@ -279,7 +282,7 @@
           hy (aget i HI-y)
           ly (aget i LO-y)
           sx (bit-and hx INT32_SIGN_BIT) ;; capture the sign of x
-          hx (bit-xor hx sx) ;; set x to |x| using the sign
+          hx (bit-and hx INT32_NON_SIGN_BITS) ;; set x to |x|
           hy (bit-and hy INT32_NON_SIGN_BITS) ;; set y to |y|
           hx<=hy (<= hx hy)]
       (cond
@@ -333,7 +336,7 @@
                 (aset i HI-x (bit-or hx sx))
                 (aset i LO-x lx)
                 (* (aget d xpos) 1.0))))
-          (catch :default e (println e) (println (ex-data e)) (aget Zero (>>> sx 31))))))))
+          (catch #?(:clj Exception :cljs :default) e (println e) (println (ex-data e)) (aget Zero (>>> sx 31))))))))
 
 (defn IEEE-remainder
   {:doc "Returns the remainder per IEEE 754 such that
@@ -812,7 +815,7 @@
    :added "1.10.892"}
   [d]
   ;; Use a single conditional and handle the likely cases first
-  (if (< d Number.POSITIVE_INFINITY)
+  (if (< d js/Number.POSITIVE_INFINITY)
     (let [a (js/ArrayBuffer. 8)
           f (js/Float64Array. a)
           i (js/Uint32Array. a)
