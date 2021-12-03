@@ -58,9 +58,9 @@
 
 (def ^{:private true :doc "offset of hi integers in 64-bit values"} LO (- 1 HI))
 
-(def ^{:private true :const true} INT32-SIGN-BIT 0x80000000)
+(def ^{:private true :const true} INT32_SIGN_BIT 0x80000000)
 
-(def ^{:private true :const true} INT32-NON-SIGN-BITS 0x7FFFFFFF)
+(def ^{:private true :const true} INT32_NON_SIGN_BITS 0x7FFFFFFF)
 
 ;; rename the bit-shift operations for convenience in porting,
 ;; and because shortening the code makes it a little easier to read
@@ -192,7 +192,7 @@
     ;; insert the double value into the buffer
     (aset d 0 x)
     ;; update the sign bit
-    (aset i hi (bit-and (aget i hi) INT32-NON-SIGN-BITS))
+    (aset i hi (bit-and (aget i hi) INT32_NON_SIGN_BITS))
     ;; return the new double
     (aget d 0)))
 
@@ -278,9 +278,9 @@
           lx (aget i LO-x)
           hy (aget i HI-y)
           ly (aget i LO-y)
-          sx (bit-and hx INT32-SIGN-BIT) ;; capture the sign of x
+          sx (bit-and hx INT32_SIGN_BIT) ;; capture the sign of x
           hx (bit-xor hx sx) ;; set x to |x| using the sign
-          hy (bit-and hy INT32-NON-SIGN-BITS) ;; set y to |y|
+          hy (bit-and hy INT32_NON_SIGN_BITS) ;; set y to |y|
           hx<=hy (<= hx hy)]
       (cond
         ;; additional exception values
@@ -374,10 +374,10 @@
             hp (aget i (+ HI 2))
             lp (aget i (+ LO 2))
             ;; sx is the sign bit
-            sx (bit-and hx INT32-SIGN-BIT)
+            sx (bit-and hx INT32_SIGN_BIT)
             ;; strip the sign bit from hp and hx
-            hp (bit-and hp INT32-NON-SIGN-BITS)
-            hx (bit-and hx INT32-NON-SIGN-BITS)
+            hp (bit-and hp INT32_NON_SIGN_BITS)
+            hx (bit-and hx INT32_NON_SIGN_BITS)
 
             ;;make x < 2p
             dividend (if (<= hp 0x7FDFFFFF) (IEEE-fmod dividend (+ divisor divisor)) dividend)]
@@ -740,6 +740,21 @@
    :added "1.10.892"}
   [x] (Math/log1p x))
 
+(defn add64
+  {:doc "Takes the high and low words for 2 different 64 bit integers, and adds them.
+  This handles overflow from the low-order words into the high order words."
+   :private true}
+  [hx lx hy ly]
+  (let [sx (>>> (bit-and lx INT32_SIGN_BIT) 31)
+        sy (>>> (bit-and ly INT32_SIGN_BIT) 31)
+        lr (+ (bit-and INT32_NON_SIGN_BITS lx) (bit-and INT32_NON_SIGN_BITS ly))
+        c31 (>>> (bit-and lr INT32_SIGN_BIT) 31)
+        b31 (+ sx sy c31)
+        lr (bit-or (bit-and lr INT32_NON_SIGN_BITS) (<< b31 31))
+        c32 (>> b31 1)
+        hr (+ hx hy c32)]
+    [hr lr]))
+
 (defn next-after
   {:doc "Returns the adjacent floating point number to start in the direction of
   the second argument. If the arguments are equal, the second is returned.
@@ -759,34 +774,85 @@
   (let [a (js/ArrayBuffer. 8)
         f (js/Float64Array. a)
         i (js/Uint32Array. a)]
-    (aset f 0 start)
     (cond
       (> start direction) (if-not (= start 0.0)
-                            (let [hiw (aget i HI)
-                                  low (aget i LO)]))
-      )))
+                            (let [_ (aset f 0 start)
+                                  ht (aget i HI)
+                                  lt (aget i LO)
+                                  ;; ht&lt != 0 since start != 0.0
+                                  ;; So long as the top bit is not set, then whole number is > 0
+                                  [hr lr] (if (>= ht 0)
+                                            (add64 ht lt 0xFFFFFFFF 0xFFFFFFFF)
+                                            (add64 ht lt 0 1))]
+                              (aset i HI hr)
+                              (aset i LO lr)
+                              (aget f 0))
+                            ;; start == 0.0 && direction < 0.0
+                            (- MIN_FLOAT_VALUE))
+      ;; Add +0.0 to get rid of a -0.0 (+0.0 + -0.0 => +0.0)
+      ;; then bitwise convert start to integer
+      (< start direction) (let [_ (aset f 0 (+ start 0.0))
+                                ht (aget i HI)
+                                lt (aget i LO)
+                                [hr lr] (if (>= ht 0)
+                                          (add64 ht lt 0 1)
+                                          (add64 ht lt 0xFFFFFFFF 0xFFFFFFFF))]
+                            (aset i HI hr)
+                            (aset i LO lr)
+                            (aget f 0))
+      (= start direction) direction
+      :default (+ start direction))))  ;; isNaN(start) || isNaN(direction)
 
 (defn next-up
   {:doc "Returns the adjacent double of d in the direction of ##Inf.
   If d is ##NaN => ##NaN
   If d is ##Inf => ##Inf
   If d is zero => Double/MIN_VALUE
-  See: "
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextUp-double-"
    :added "1.10.892"}
   [d]
-  ;; TODO
-  (throw (ex-info "Unimplemented operation" {:op next-up})))
+  ;; Use a single conditional and handle the likely cases first
+  (if (< d Number.POSITIVE_INFINITY)
+    (let [a (js/ArrayBuffer. 8)
+          f (js/Float64Array. a)
+          i (js/Uint32Array. a)
+          ;; Add +0.0 to get rid of a -0.0 (+0.0 + -0.0 => +0.0)
+          _ (aset f 0 (+ start 0.0))
+          ht (aget i HI)
+          lt (aget i LO)
+          [hr lr] (if (>= ht 0)
+                    (add64 ht lt 0 1)
+                    (add64 ht lt 0xFFFFFFFF 0xFFFFFFFF))]
+      (aset i HI hr)
+      (aset i LO lr)
+      (aget f 0))
+    ;; d is NaN or +Infinity
+    d))
 
 (defn next-down
   {:doc "Returns the adjacent double of d in the direction of ##-Inf.
   If d is ##NaN => ##NaN
   If d is ##Inf => ##-Inf
   If d is zero => Double/MIN_VALUE
-  See: "
+  See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextDown-double-"
    :added "1.10.892"}
   [d]
-  ;; TODO
-  (throw (ex-info "Unimplemented operation" {:op next-down})))
+  (cond
+    (or (js/Number.isNaN d) (= d ##-Inf)) d
+    (= d 0.0) (- MIN_FLOAT_VALUE)
+    :default
+    (let [a (js/ArrayBuffer. 8)
+          f (js/Float64Array. a)
+          i (js/Uint32Array. a)
+          _ (aset f 0 d)
+          ht (aget i HI)
+          lt (aget i LO)
+          [hr lr] (if (> d 0)
+                    (add64 ht lt 0xFFFFFFFF 0xFFFFFFFF)
+                    (add64 ht lt 0 1))]
+      (aset i HI hr)
+      (aset i LO lr)
+      (aget f 0))))
 
 (def ^:private MAX_SCALE (+ EXP_MAX (- EXP_MIN) SIGNIFICAND_WIDTH32 32 1))
 
