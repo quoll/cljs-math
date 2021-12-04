@@ -93,4 +93,4 @@
 
 (defspec floor-mod-test 100
   (prop/for-all [x gen/large-integer y (gen/such-that #(not= % 0) gen/large-integer)]
-    (= (m/floor-mod x y) (Math/floorMod (long x) (long y)))))
+    (= (m/floor-mod x y) (Math/floorMod ^long x ^long y))))  ;; type hints to avoid CLJ-2674
