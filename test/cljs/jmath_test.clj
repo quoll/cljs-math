@@ -55,7 +55,7 @@
   (prop/for-all [v gen/double]
     (d= (m/to-degrees v) (Math/toDegrees v))))
 
-(defspec ieee-remainder-test 100
+(defspec ieee-remainder-test 1000
   (prop/for-all [dividend gen/double divisor gen/double]
     (d= (m/IEEE-remainder dividend divisor) (Math/IEEEremainder dividend divisor))))
 
@@ -66,3 +66,31 @@
 (deftest ceil-null-test
   (is (thrown? Exception (Math/ceil nil)))
   (is (thrown? ExceptionInfo (m/ceil nil))))
+
+(defspec floor-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/floor v) (Math/floor v))))
+
+(deftest floor-null-test
+  (is (thrown? Exception (Math/floor nil)))
+  (is (thrown? ExceptionInfo (m/floor nil))))
+
+(defspec copy-sign-test 100
+  (prop/for-all [magnitude gen/double sign gen/double]
+    (d= (m/copy-sign magnitude sign) (Math/copySign magnitude sign))))
+
+(defspec rint-test 100
+  (prop/for-all [a gen/double]
+    (d= (m/rint a) (Math/rint a))))
+
+(defspec round-test 100
+  (prop/for-all [a gen/double]
+    (= (m/round a) (Math/round a))))
+
+(defspec floor-div-test 100
+  (prop/for-all [x gen/large-integer y (gen/such-that #(not= % 0) gen/large-integer)]
+    (= (m/floor-div x y) (Math/floorDiv x y))))
+
+(defspec floor-mod-test 100
+  (prop/for-all [x gen/large-integer y (gen/such-that #(not= % 0) gen/large-integer)]
+    (= (m/floor-mod x y) (Math/floorMod (long x) (long y)))))

@@ -292,7 +292,7 @@
       (cond
         ;; additional exception values
         (and hx<=hy (or (< hx hy) (< lx ly))) x ;; |x|<|y| return x
-        (and hx<=hy (= lx ly)) (aget Zero (>> sx 31)) ;; |x|=|y| return x*0
+        (and hx<=hy (= lx ly)) (aget Zero (>>> sx 31)) ;; |x|=|y| return x*0
 
         :default
         ;; determine ix = ilogb(x), iy = ilogb(y)
@@ -483,7 +483,7 @@
   (let [sign (copy-sign 1.0, a)
         a (Math/abs a)
         a (if (< a two-to-the-52)
-            (- (+ two-to-the-52 a) two-to-the-52) a)]
+            (- (d+ two-to-the-52 a) two-to-the-52) a)]
     (* sign a)))
 
 (defn atan2
@@ -573,6 +573,8 @@
     (throw (ex-info "Integer overflow" {:fn "negative-exact"}))
     (- a)))
 
+(defn xor [a b] (or (and a (not b)) (and (not a) b)))
+
 (defn floor-div
   {:doc "Integer division that rounds to negative infinity (as opposed to zero).
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorDiv-long-long-"
@@ -581,8 +583,8 @@
   (if-not (and (js/Number.isInteger x) (js/Number.isInteger y))
     (throw (ex-info "Integer operation called with non-integer arguments"
                     {:x-int? (js/Number.isInteger x :y-int? (js/Number.isInteger y))}))
-    (let [r (Math/floor (/ x y))]
-      (if (and (< (bit-xor x y) 0) (not= (* r y) x))
+    (let [r (long (/ x y))]
+      (if (and (xor (< x 0) (< y 0)) (not= (* r y) x))
         (dec r)
         r))))
 
