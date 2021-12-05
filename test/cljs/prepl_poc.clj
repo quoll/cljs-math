@@ -15,17 +15,14 @@
   (fn [f]
     (println "Launching test pREPL.")
     (server/start-server {:accept 'cljs.core.server/io-prepl  :address "127.0.0.1"  :port 6777 :name "cljs.math-repl" :args [:repl-env (cljs.repl.node/repl-env)]})
-    (let [socket (java.net.Socket. "127.0.0.1" 6777)
-          rdr (io/reader socket)
-          wrtr (io/writer socket)]
+    (with-open [socket (java.net.Socket. "127.0.0.1" 6777)
+                rdr (io/reader socket)
+                wrtr (io/writer socket)]
       (reset! reader rdr)
       (reset! writer wrtr)
       (println "Executing tests")
       (f)
-      (println "Tearing down test pREPL.")
-      (.close @reader)
-      (.close @writer)
-      (.close socket))))
+      (println "Tearing down test pREPL."))))
 
 (defn cljs-eval [expr]
   (-> (binding [*out* @writer
