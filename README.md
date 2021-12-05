@@ -1,10 +1,12 @@
 # cljs-math
-A ClojureScript port of [clojure.java.math](https://clojure.github.io/clojure/branch-master/clojure.java.math-api.html)
+A ClojureScript port of [`clojure.java.math`](https://clojure.github.io/clojure/branch-master/clojure.java.math-api.html)
 
 This can be included in `deps.edn` by adding the following entry to the `:deps` map:
 ```
 com.github.quoll/cljs-math {:git/tag "v0.0.1" :git/sha "f92217e"}
 ```
+
+The prime focus on this library is correctness before performance. It matches `clojure.java.math` as closely as possible.
 
 ## Testing
 Testing directly in ClojureScript is minimal. Checking for correctness has been done by stubbing out some js operations in Clojure, and running tests on the JVM. For this reason, the file is `.cljc` rather than `.cljs`.
