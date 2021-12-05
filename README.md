@@ -13,3 +13,10 @@ Testing performs generative tests, directly comparing the results of this implem
 
 ## Future
 My hope is that this will be accepted by ClojureScript. If it is, then the primary file should be renamed to `.cljs` and the namespace updated to `clojure.math`.
+
+
+# License
+Copyright © 2021 Paula Gearon
+
+Distributed under the Eclipse Public License either version 1.0 or (at
+your option) any later version.
