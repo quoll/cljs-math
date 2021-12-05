@@ -14,6 +14,8 @@ Testing performs generative tests, directly comparing the results of this implem
 ## Future
 My hope is that this will be accepted by ClojureScript. If it is, then the primary file should be renamed to `.cljs` and the namespace updated to `clojure.math`.
 
+## m2 Namespace
+During development I also implemented one of the more complex functions in embedded JS code. I have left this in place temporarily, as a point of comparison.
 
 # License
 Copyright © 2021 Paula Gearon
