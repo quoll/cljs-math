@@ -639,10 +639,7 @@
                    i (js/Uint32Array. a)
                    hi (if little-endian? 1 0)]
                (aset f 0 d)
-               (let [hd (aget i hi)]
-                 (if (< hd 0x00100000) ;; subnormal
-                   EXP_MIN
-                   (- (>> (bit-and hd EXP_BITMASK32) (dec SIGNIFICAND_WIDTH32)) EXP_BIAS))))))
+               (- (>> (bit-and (aget i hi) EXP_BITMASK32) (dec SIGNIFICAND_WIDTH32)) EXP_BIAS))))
 
 (defn hi-lo->double
   {:doc "Converts a pair of 32 bit integers into an IEEE-754 64 bit floating point number.
@@ -660,7 +657,7 @@
   {:doc "returns a floating point power of two in the normal range"
    :private true}
   [n]
-  (assert (and (>= n EXP_MIN) (<= EXP_MAX)))
+  (assert (and (>= n EXP_MIN) (<= n EXP_MAX)))
   (hi-lo->double
    (bit-and (<< (+ n EXP_BIAS) (dec SIGNIFICAND_WIDTH32)) EXP_BITMASK32) 0))
 
@@ -673,26 +670,30 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#ulp-double-"
    :added "1.10.892"}
   [d]
-  (let [e (get-exponent d)]
-    (case e
-      1024 (abs d)  ;; EXP_MAX + 1
-      -1023 MIN_FLOAT_VALUE  ;; EXP_MIN - 1
-      (let [e (- e (+ 31 SIGNIFICAND_WIDTH32))]  ;; SIGNIFICAND_WIDTH64 -1
-        (if (>= e EXP_MIN)
-          (power-of-two exp)
-          (let [shift (- exp (- EXP_MIN 31 SIGNIFICAND_WIDTH32))]
-            (if (< shift 32)
-              (hi-lo->double 0 (<< 1 shift))
-              (hi-lo->double (<< 1 (- shift 32)) 0))))))))
+  (cond
+    (js/Number.isNaN d) d
+    (js/Number.isFinite d)
+    (let [e (get-exponent d)]
+      (case e
+        1024 (abs d)  ;; EXP_MAX + 1
+        -1023 MIN_FLOAT_VALUE  ;; EXP_MIN - 1
+        (let [e (- e (+ 31 SIGNIFICAND_WIDTH32))]  ;; SIGNIFICAND_WIDTH64 -1
+          (if (>= e EXP_MIN)
+            (power-of-two e)
+            (let [shift (- e (- EXP_MIN 31 SIGNIFICAND_WIDTH32))]
+              (if (< shift 32)
+                (hi-lo->double 0 (<< 1 shift))
+                (hi-lo->double (<< 1 (- shift 32)) 0)))))))
+    :default ##Inf))
 
 (defn signum
   {:doc "Returns the signum function of d - zero for zero, 1.0 if >0, -1.0 if <0.
   If d is ##NaN => ##NaN
-  If d is ##Inf or ##-Inf => d
+  If d is ##Inf or ##-Inf => sign of d
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#signum-double-"
    :added "1.10.892"}
   [d]
-  (if (or (= 0.0 d) (js/Number.isNaN d) (not (js/Number.isFinite d)))
+  (if (or (= 0.0 d) (js/Number.isNaN d))
     d
     (copy-sign 1.0 d)))
 
@@ -812,7 +813,7 @@
                             (aset i LO lr)
                             (aget f 0))
       (= start direction) direction
-      :default (+ start direction))))  ;; isNaN(start) || isNaN(direction)
+      :default (d+ start direction))))  ;; isNaN(start) || isNaN(direction)
 
 (defn next-up
   {:doc "Returns the adjacent double of d in the direction of ##Inf.
@@ -843,13 +844,13 @@
 (defn next-down
   {:doc "Returns the adjacent double of d in the direction of ##-Inf.
   If d is ##NaN => ##NaN
-  If d is ##Inf => ##-Inf
-  If d is zero => Double/MIN_VALUE
+  If d is ##Inf => Double/MAX_VALUE
+  If d is zero => -Double/MIN_VALUE
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextDown-double-"
    :added "1.10.892"}
   [d]
   (cond
-    (or (js/Number.isNaN d) (= d ##-Inf)) d
+    (or (js/Number.isNaN d) (= ##-Inf d)) d
     (= d 0.0) (- MIN_FLOAT_VALUE)
     :default
     (let [a (js/ArrayBuffer. 8)

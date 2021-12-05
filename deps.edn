@@ -1,3 +1,11 @@
-{:deps {org.clojure/clojurescript {:mvn/version "1.10.891"}
+{:deps {org.clojure/clojure {:mvn/version "1.9.0"}
+        org.clojure/clojurescript {:mvn/version "1.10.891"}
         criterium/criterium {:mvn/version "0.4.6"}
-        }}
+        nrepl/nrepl {:mvn/version "0.8.3"}
+        cider/piggieback {:mvn/version "0.5.3"}}
+ :paths ["src" "classes" "test"]
+ :aliases {:cider-cljs {:main-opts ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware,cider.piggieback/wrap-cljs-repl]"]}
+           :test {:extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.0" :git/sha "b3fd0d2"}
+                               org.clojure/test.check {:mvn/version "1.1.1"}}
+                  :main-opts ["-m" "cognitect.test-runner"]
+                  :exec-fn cognitect.test-runner.api/test} }}

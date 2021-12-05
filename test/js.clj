@@ -19,6 +19,15 @@
 
 (def Number.isInteger int?)
 
+(def INT_MASK 0xFFFFFFFF)
+
+(defn as-int
+  [x]
+  (let [x (bit-and INT_MASK x)]
+    (if (zero? (bit-and 0x80000000 x))
+      x
+      (bit-or -0x100000000 x))))
+
 (defprotocol ArrayAccess
   (aget [a n] "Retrieves data at position n")
   (aset [a n v] "Sets a value n at position n"))
@@ -83,9 +92,9 @@
       (.put ^IntBuffer (.buffer a) ^int n v)))
 
   js.Float64Array
-  (aget [a n] (.get ^DoubleBuffer (.buffer a) ^int n))
+  (aget [a n]
+    (.get ^DoubleBuffer (.buffer a) (int (as-int n))))
   (aset [a n v] (.put ^DoubleBuffer (.buffer a) ^int n ^double v)))
-
 
 (defn <<
   [n s]
@@ -103,15 +112,6 @@
 (defn >>>
   [n s]
   (unsigned-bit-shift-right (bit-and 0xffffffff n) s))
-
-(def INT_MASK 0xFFFFFFFF)
-
-(defn as-int
-  [x]
-  (let [x (bit-and INT_MASK x)]
-    (if (zero? (bit-and 0x80000000 x))
-      x
-      (bit-or -0x100000000 x))))
 
 (defn add-int
   [a b]
