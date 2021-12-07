@@ -22,29 +22,29 @@
   ^{:doc "Constant used to convert an angular value in degrees to the equivalent in radians"
     :private true
     :added "1.10.892"
-    :const true} DEGREES_TO_RADIANS 0.017453292519943295)
+    :const true} DEGREES-TO-RADIANS 0.017453292519943295)
 
 (def
   ^{:doc "Constant used to convert an angular value in radians to the equivalent in degrees"
     :private true
     :added "1.10.892"
-    :const true} RADIANS_TO_DEGREES 57.29577951308232)
+    :const true} RADIANS-TO-DEGREES 57.29577951308232)
 
-(def ^{:private true :const true} two-to-the-52 0x10000000000000)
+(def ^{:private true :const true} TWO-TO-THE-52 0x10000000000000)
 
-(def ^{:private true :const true} SIGNIFICAND_WIDTH32 21)
+(def ^{:private true :const true} SIGNIFICAND-WIDTH32 21)
 
-(def ^{:private true :const true} EXP_BIAS 1023)
+(def ^{:private true :const true} EXP-BIAS 1023)
 
-(def ^{:private true :const true} EXP_BITMASK32 0x7FF00000)
+(def ^{:private true :const true} EXP-BITMASK32 0x7FF00000)
 
-(def ^{:private true :const true} EXP_MAX EXP_BIAS)
+(def ^{:private true :const true} EXP-MAX EXP-BIAS)
 
-(def ^{:private true :const true} EXP_MIN -1022)
+(def ^{:private true :const true} EXP-MIN -1022)
 
-(def ^{:const true} MIN_FLOAT_VALUE 5e-324) ;; bit representation of 0x0000000000000001
+(def ^{:const true} MIN-FLOAT-VALUE 5e-324) ;; bit representation of 0x0000000000000001
 
-(def ^{:const true} MAX_FLOAT_VALUE 1.7976931348623157e+308) ;; bit representation of 0x7FEFFFFFFFFFFFFF
+(def ^{:const true} MAX-FLOAT-VALUE 1.7976931348623157e+308) ;; bit representation of 0x7FEFFFFFFFFFFFFF
 
 (defn get-little-endian
   "Tests the platform for endianness. Returns true when little-endian, false otherwise."
@@ -62,9 +62,9 @@
 
 (def ^{:private true :doc "offset of hi integers in 64-bit values"} LO (- 1 HI))
 
-(def ^{:private true :const true} INT32_SIGN_BIT 0x80000000)
+(def ^{:private true :const true} INT32-NON-SIGN-BIT 0x80000000)
 
-(def ^{:private true :const true} INT32_NON_SIGN_BITS 0x7FFFFFFF)
+(def ^{:private true :const true} INT32-NON-SIGN-BITS 0x7FFFFFFF)
 
 ;; rename the bit-shift operations for convenience in porting,
 ;; and because shortening the code makes it a little easier to read
@@ -138,14 +138,14 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#toRadians-double-"
    :added "1.10.892"}
   [deg]
-  (* deg DEGREES_TO_RADIANS))
+  (* deg DEGREES-TO-RADIANS))
 
 (defn to-degrees
   {:doc "Converts an angle in radians to an approximate equivalent angle in degrees.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#toDegrees-double-"
    :added "1.10.892"}
   [r]
-  (* r RADIANS_TO_DEGREES))
+  (* r RADIANS-TO-DEGREES))
 
 (defn exp
   {:doc "Returns Euler's number e raised to the power of a.
@@ -210,7 +210,7 @@
     ;; insert the double value into the buffer
     (aset d 0 x)
     ;; update the sign bit
-    (aset i hi (bit-and (aget i hi) INT32_NON_SIGN_BITS))
+    (aset i hi (bit-and (aget i hi) INT32-NON-SIGN-BITS))
     ;; return the new double
     (aget d 0)))
 
@@ -285,9 +285,9 @@
           lx (aget i LO-x)
           hy (aget i HI-y)
           ly (aget i LO-y)
-          sx (bit-and hx INT32_SIGN_BIT) ;; capture the sign of x
-          hx (bit-and hx INT32_NON_SIGN_BITS) ;; set x to |x|
-          hy (bit-and hy INT32_NON_SIGN_BITS) ;; set y to |y|
+          sx (bit-and hx INT32-NON-SIGN-BIT) ;; capture the sign of x
+          hx (bit-and hx INT32-NON-SIGN-BITS) ;; set x to |x|
+          hy (bit-and hy INT32-NON-SIGN-BITS) ;; set y to |y|
           hx<=hy (<= hx hy)]
       (cond
         ;; additional exception values
@@ -383,10 +383,10 @@
             hp (aget i (+ HI 2))
             lp (aget i (+ LO 2))
             ;; sx is the sign bit
-            sx (bit-and hx INT32_SIGN_BIT)
+            sx (bit-and hx INT32-NON-SIGN-BIT)
             ;; strip the sign bit from hp and hx
-            hp (bit-and hp INT32_NON_SIGN_BITS)
-            hx (bit-and hx INT32_NON_SIGN_BITS)
+            hp (bit-and hp INT32-NON-SIGN-BITS)
+            hx (bit-and hx INT32-NON-SIGN-BITS)
 
             ;;make x < 2p
             dividend (if (<= hp 0x7FDFFFFF) (IEEE-fmod dividend (d+ divisor divisor)) dividend)]
@@ -482,8 +482,8 @@
   [a]
   (let [sign (copy-sign 1.0, a)
         a (Math/abs a)
-        a (if (< a two-to-the-52)
-            (- (d+ two-to-the-52 a) two-to-the-52) a)]
+        a (if (< a TWO-TO-THE-52)
+            (- (d+ TWO-TO-THE-52 a) TWO-TO-THE-52) a)]
     (* sign a)))
 
 (defn atan2
@@ -632,14 +632,14 @@
    :added "1.10.892"}
   [d]
   (cond
-    (or (js/Number.isNaN d) (not (js/Number.isFinite d))) (inc EXP_MAX)
-    (zero? d) (dec EXP_MIN)
+    (or (js/Number.isNaN d) (not (js/Number.isFinite d))) (inc EXP-MAX)
+    (zero? d) (dec EXP-MIN)
     :default (let [a (js/ArrayBuffer. 8)
                    f (js/Float64Array. a)
                    i (js/Uint32Array. a)
                    hi (if little-endian? 1 0)]
                (aset f 0 d)
-               (- (>> (bit-and (aget i hi) EXP_BITMASK32) (dec SIGNIFICAND_WIDTH32)) EXP_BIAS))))
+               (- (>> (bit-and (aget i hi) EXP-BITMASK32) (dec SIGNIFICAND-WIDTH32)) EXP-BIAS))))
 
 (defn hi-lo->double
   {:doc "Converts a pair of 32 bit integers into an IEEE-754 64 bit floating point number.
@@ -657,9 +657,9 @@
   {:doc "returns a floating point power of two in the normal range"
    :private true}
   [n]
-  (assert (and (>= n EXP_MIN) (<= n EXP_MAX)))
+  (assert (and (>= n EXP-MIN) (<= n EXP-MAX)))
   (hi-lo->double
-   (bit-and (<< (+ n EXP_BIAS) (dec SIGNIFICAND_WIDTH32)) EXP_BITMASK32) 0))
+   (bit-and (<< (+ n EXP-BIAS) (dec SIGNIFICAND-WIDTH32)) EXP-BITMASK32) 0))
 
 (defn ulp
   {:doc "Returns the size of an ulp (unit in last place) for d.
@@ -675,12 +675,12 @@
     (js/Number.isFinite d)
     (let [e (get-exponent d)]
       (case e
-        1024 (abs d)  ;; EXP_MAX + 1
-        -1023 MIN_FLOAT_VALUE  ;; EXP_MIN - 1
-        (let [e (- e (+ 31 SIGNIFICAND_WIDTH32))]  ;; SIGNIFICAND_WIDTH64 -1
-          (if (>= e EXP_MIN)
+        1024 (abs d)  ;; EXP-MAX + 1
+        -1023 MIN-FLOAT-VALUE  ;; EXP-MIN - 1
+        (let [e (- e (+ 31 SIGNIFICAND-WIDTH32))]  ;; SIGNIFICAND_WIDTH64 -1
+          (if (>= e EXP-MIN)
             (power-of-two e)
-            (let [shift (- e (- EXP_MIN 31 SIGNIFICAND_WIDTH32))]
+            (let [shift (- e (- EXP-MIN 31 SIGNIFICAND-WIDTH32))]
               (if (< shift 32)
                 (hi-lo->double 0 (<< 1 shift))
                 (hi-lo->double (<< 1 (- shift 32)) 0)))))))
@@ -757,12 +757,12 @@
   This handles overflow from the low-order words into the high order words."
    :private true}
   [hx lx hy ly]
-  (let [sx (>>> (bit-and lx INT32_SIGN_BIT) 31)
-        sy (>>> (bit-and ly INT32_SIGN_BIT) 31)
-        lr (+ (bit-and INT32_NON_SIGN_BITS lx) (bit-and INT32_NON_SIGN_BITS ly))
-        c31 (>>> (bit-and lr INT32_SIGN_BIT) 31)
+  (let [sx (>>> (bit-and lx INT32-NON-SIGN-BIT) 31)
+        sy (>>> (bit-and ly INT32-NON-SIGN-BIT) 31)
+        lr (+ (bit-and INT32-NON-SIGN-BITS lx) (bit-and INT32-NON-SIGN-BITS ly))
+        c31 (>>> (bit-and lr INT32-NON-SIGN-BIT) 31)
         b31 (+ sx sy c31)
-        lr (bit-or (bit-and lr INT32_NON_SIGN_BITS) (<< b31 31))
+        lr (bit-or (bit-and lr INT32-NON-SIGN-BITS) (<< b31 31))
         c32 (>> b31 1)
         hr (+ hx hy c32)]
     [hr lr]))
@@ -793,20 +793,20 @@
                                   lt (aget i LO)
                                   ;; ht&lt != 0 since start != 0.0
                                   ;; So long as the top bit is not set, then whole number is > 0
-                                  [hr lr] (if (>= ht 0)
+                                  [hr lr] (if (zero? (bit-and ht INT32-NON-SIGN-BIT))
                                             (add64 ht lt 0xFFFFFFFF 0xFFFFFFFF)
                                             (add64 ht lt 0 1))]
                               (aset i HI hr)
                               (aset i LO lr)
                               (aget f 0))
                             ;; start == 0.0 && direction < 0.0
-                            (- MIN_FLOAT_VALUE))
+                            (- MIN-FLOAT-VALUE))
       ;; Add +0.0 to get rid of a -0.0 (+0.0 + -0.0 => +0.0)
       ;; then bitwise convert start to integer
       (< start direction) (let [_ (aset f 0 (d+ start 0.0))
                                 ht (aget i HI)
                                 lt (aget i LO)
-                                [hr lr] (if (>= ht 0)
+                                [hr lr] (if (zero? (bit-and ht INT32-NON-SIGN-BIT))
                                           (add64 ht lt 0 1)
                                           (add64 ht lt 0xFFFFFFFF 0xFFFFFFFF))]
                             (aset i HI hr)
@@ -832,7 +832,7 @@
           _ (aset f 0 (d+ d 0.0))
           ht (aget i HI)
           lt (aget i LO)
-          [hr lr] (if (>= ht 0)
+          [hr lr] (if (zero? (bit-and ht INT32-NON-SIGN-BIT))
                     (add64 ht lt 0 1)
                     (add64 ht lt 0xFFFFFFFF 0xFFFFFFFF))]
       (aset i HI hr)
@@ -851,7 +851,7 @@
   [d]
   (cond
     (or (js/Number.isNaN d) (= ##-Inf d)) d
-    (= d 0.0) (- MIN_FLOAT_VALUE)
+    (= d 0.0) (- MIN-FLOAT-VALUE)
     :default
     (let [a (js/ArrayBuffer. 8)
           f (js/Float64Array. a)
@@ -866,7 +866,7 @@
       (aset i LO lr)
       (aget f 0))))
 
-(def ^:private MAX_SCALE (+ EXP_MAX (- EXP_MIN) SIGNIFICAND_WIDTH32 32 1))
+(def ^:private MAX_SCALE (+ EXP-MAX (- EXP-MIN) SIGNIFICAND-WIDTH32 32 1))
 
 (def ^:private two-to-the-double-scale-up (power-of-two 512))
 

@@ -1,7 +1,6 @@
 (ns cljs.jmath-test
   (:require [cljs.math :as m]
             [clojure.test :refer [deftest is testing run-tests]]
-            [clojure.test.check :as tc]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop])

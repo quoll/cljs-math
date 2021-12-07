@@ -4,12 +4,23 @@
             [clojure.core.server :as server]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.test :as t :refer [deftest is]]))
+            [clojure.test :as t :refer [deftest is]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]))
 
 ;; run the tests with clojure -M:test -n cljs.math.test-prepl
 
 (def reader (atom nil))
 (def writer (atom nil))
+
+(defn cljs-eval [expr]
+  (-> (binding [*out* @writer
+                *in* @reader]
+        (println expr)
+        (read-line))
+      edn/read-string
+      :val))
 
 (t/use-fixtures :once
   (fn [f]
@@ -27,20 +38,142 @@
         (reset! reader rdr)
         (reset! writer wrtr)
         (println "Executing tests")
+        (cljs-eval "(require 'cljs.math)")
         (f)
         (println "Tearing down test pREPL.")))))
 
-(defn cljs-eval [expr]
-  (-> (binding [*out* @writer
-                *in* @reader]
-        (println expr)
-        (read-line))
-      edn/read-string
-      :val))
-
-(deftest sanity-test
+#_(deftest sanity-test
   (is (= "6" (cljs-eval "(+ 1 2 3)"))))
 
-(deftest cljs-match-sanity-test
-  (is (= "nil"  (cljs-eval "(require 'cljs.math)")))
-  (is (= "666" (cljs-eval "(cljs.math/abs -666)"))))
+#_(deftest cljs-match-sanity-test
+  (is (= "42" (cljs-eval "(cljs.math/abs -42)"))))
+
+(defn n==
+  [a b]
+  (or (and (Double/isNaN a) (Double/isNaN b)) (== a b)))
+
+(defmacro test-double->double
+  [n jfn cfn & [equals]]
+  (let [jmfn (symbol "Math" (str jfn))
+        cmfn (name cfn)
+        eq (or equals n==)]
+    `(let [ds# (gen/sample gen/double ~n)]
+       (is (every? identity
+            (map ~eq
+                 (read-string
+                  (cljs-eval (str "(->> '" (pr-str ds#)
+                                  " (map double)"
+                                  " (map cljs.math/" ~cmfn "))")))
+                 (map #(~jmfn %) ds#)))
+           (str "data: " (pr-str ds#))))))
+
+(defmacro test-t-t->double
+  [n jfn cfn gen1 gen2 & [equals]]
+  (let [jmfn (symbol "Math" (str jfn))
+        cmfn (name cfn)
+        eq (or equals n==)]
+    `(let [ds# (gen/sample ~gen1 ~n)
+           ds2# (gen/sample ~gen2 ~n)]
+       (is (every? identity
+            (map ~eq
+                 (read-string
+                  (cljs-eval (str "(->> (map #(vector %1 %2) '"
+                                  (pr-str ds#) " '" (pr-str ds2#) ")"
+                                  " (map #(apply cljs.math/" ~cmfn " %)))")))
+                 (map #(~jmfn %1 %2) ds# ds2#)))
+           (str "data: " (pr-str (map vector ds# ds2#)))))))
+
+(defmacro test-double-double->double
+  [n jfn cfn & [equals]]
+  `(test-t-t->double ~n ~jfn ~cfn gen/double gen/double ~equals))
+
+(defmacro test-zlong-long->long
+  [n jfn cfn]
+  (let [jmfn (symbol "Math" (str jfn))
+        cmfn (name cfn)]
+    `(let [lzs# (gen/sample gen/large-integer ~n)
+           ls# (gen/sample (gen/such-that #(not= % 0) gen/large-integer) ~n)]
+       (is (every? identity
+            (map ==
+                 (read-string
+                  (cljs-eval (str "(->> (map #(vector (long %1) (long %2)) '"
+                                  (pr-str lzs#) " '" (pr-str ls#) ")"
+                                  " (map #(apply cljs.math/" ~cmfn " %)))")))
+                 (map #(~jmfn %1 %2) lzs# ls#)))
+           (str "data: " (pr-str (map vector lzs# ls#)))))))
+
+(def ^:const delta 1E-15)
+
+(defn nd==
+  [label a b]
+  (or (and (Double/isNaN a) (Double/isNaN b))
+      (== a b)
+      (do
+        (println label "variance:" a "\u2260" b)
+        (< (Math/abs (- a b)) delta))))
+
+(deftest sin-test
+  (test-double->double 100 sin sin #(nd== "sin()" %1 %2)))
+
+(deftest to-radians-test
+  (test-double->double 100 toRadians to-radians))
+
+(deftest to-degrees-test
+  (test-double->double 100 toDegrees to-degrees))
+
+(deftest ieee-remainder-test
+  (test-double-double->double 100 IEEEremainder IEEE-remainder))
+
+(deftest ceil-test
+  (test-double->double 100 ceil ceil))
+
+(deftest ceil-null-test
+  (is (= ":exception" (cljs-eval (str "(try (cljs.math/ceil nil) (catch :default _ :exception))")))))
+
+(deftest floor-test
+  (test-double->double 100 floor floor))
+
+(deftest floor-null-test
+  (is (= ":exception" (cljs-eval (str "(try (cljs.math/floor nil) (catch :default _ :exception))")))))
+
+(deftest copy-sign-test
+  (test-double-double->double 100 copySign copy-sign))
+
+(deftest rint-test
+  (test-double->double 100 rint rint))
+
+(deftest round-test
+  (test-double->double 100 round round))
+
+(deftest floor-div-test
+  (test-zlong-long->long 100 floorDiv floor-div))
+
+(deftest floor-mod-test
+  (test-zlong-long->long 100 floorMod floor-mod))
+
+(deftest get-exponent-test
+  (test-double->double 100 getExponent get-exponent))
+
+(deftest ulp-test
+  (test-double->double 100 ulp ulp))
+
+(deftest signum-test
+  (test-double->double 100 signum signum))
+
+(deftest next-after-test
+  (test-double-double->double 100 nextAfter next-after))
+
+(deftest next-up-test
+  (test-double->double 100 nextUp next-up))
+
+(deftest next-down-test
+  (test-double->double 100 nextDown next-down))
+
+(def ^:const MAX-INT 0x7fffffff)
+
+(deftest scalb-test
+  (test-t-t->double 100 scalb scalb
+                    gen/double
+                    (gen/such-that
+                     #(<= % MAX-INT)
+                     (gen/resize (inc MAX-INT) gen/small-integer))))
