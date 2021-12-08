@@ -53,7 +53,7 @@
         i (js/Uint32Array. a)
         b (js/Uint8Array. a)]
     (aset i 0 0x33221100)
-    (= 0 (aget b 0))))
+    (zero? (aget b 0))))
 
 (defonce ^:private little-endian? (get-little-endian))
 
@@ -87,7 +87,7 @@
 ;; Integer addition has to be made unchecked under Clojure
 (def d+ clojure.core/+)
 
-(defn sin
+(defn #?(:clj ^double :cljs ^number) sin
   {:doc "Returns the sine of an angle.
   If a is ##NaN, ##-Inf, ##Inf => ##NaN
   If a is zero => zero with the same sign as a
@@ -95,14 +95,14 @@
    :added "1.10.892"}
   [a] (Math/sin a))
 
-(defn cos
+(defn #?(:clj ^double :cljs ^number) cos
   {:doc "Returns the cosine of an angle.
   If a is ##NaN, ##-Inf, ##Inf => ##NaN
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/cos"
    :added "1.10.892"}
   [a] (Math/cos a))
 
-(defn tan
+(defn #?(:clj ^double :cljs ^number) tan
   {:doc "Returns the tangent of an angle.
   If a is ##NaN, ##-Inf, ##Inf => ##NaN
   If a is zero => zero with the same sign as a
@@ -110,7 +110,7 @@
    :added "1.10.892"}
   [a] (Math/tan a))
 
-(defn asin
+(defn #?(:clj ^double :cljs ^number) asin
   {:doc "Returns the arc sine of an angle, in the range -pi/2 to pi/2.
   If a is ##NaN or |a|>1 => ##NaN
   If a is zero => zero with the same sign as a
@@ -118,14 +118,14 @@
    :added "1.10.892"}
   [a] (Math/asin a))
 
-(defn acos
+(defn #?(:clj ^double :cljs ^number) acos
   {:doc "Returns the arc cosine of a, in the range 0.0 to pi.
   If a is ##NaN or |a|>1 => ##NaN
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/acos"
    :added "1.10.892"}
   [a] (Math/acos a))
 
-(defn atan
+(defn #?(:clj ^double :cljs ^number) atan
   {:doc "Returns the arc tangent of a, in the range of -pi/2 to pi/2.
   If a is ##NaN => ##NaN
   If a is zero => zero with the same sign as a
@@ -133,21 +133,21 @@
    :added "1.10.892"}
   [a] (Math/atan a))
 
-(defn to-radians
+(defn #?(:clj ^double :cljs ^number) to-radians
   {:doc "Converts an angle in degrees to an approximate equivalent angle in radians.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#toRadians-double-"
    :added "1.10.892"}
   [deg]
   (* deg DEGREES-TO-RADIANS))
 
-(defn to-degrees
+(defn #?(:clj ^double :cljs ^number) to-degrees
   {:doc "Converts an angle in radians to an approximate equivalent angle in degrees.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#toDegrees-double-"
    :added "1.10.892"}
   [r]
   (* r RADIANS-TO-DEGREES))
 
-(defn exp
+(defn #?(:clj ^double :cljs ^number) exp
   {:doc "Returns Euler's number e raised to the power of a.
   If a is ##NaN => ##NaN
   If a is ##Inf => ##Inf
@@ -156,7 +156,7 @@
    :added "1.10.892"}
   [a] (Math/exp a))
 
-(defn log
+(defn #?(:clj ^double :cljs ^number) log
   {:doc "Returns the natural logarithm (base e) of a.
   If a is ##NaN or negative => ##NaN
   If a is ##Inf => ##Inf
@@ -167,7 +167,7 @@
    :added "1.10.892"}
   [a] (Math/log a))
 
-(defn log10
+(defn #?(:clj ^double :cljs ^number) log10
   {:doc "Returns the logarithm (base 10) of a.
   If a is ##NaN or negative => ##NaN
   If a is ##Inf => ##Inf
@@ -176,7 +176,7 @@
    :added "1.10.892"}
   [a] (Math/log10 a))
 
-(defn sqrt
+(defn #?(:clj ^double :cljs ^number) sqrt
   {:doc "Returns the positive square root of a.
   If a is ##NaN or negative => ##NaN
   If a is ##Inf => ##Inf
@@ -185,7 +185,7 @@
    :added "1.10.892"}
   [a] (Math/sqrt a))
 
-(defn cbrt
+(defn #?(:clj ^double :cljs ^number) cbrt
   {:doc "Returns the cube root of a.
   If a is ##NaN => ##NaN
   If a is ##Inf or ##-Inf => a
@@ -194,7 +194,7 @@
    :added "1.10.892"}
   [a] (Math/cbrt a))
 
-(defn fabs
+(defn #?(:clj ^double :cljs ^number) fabs
   {:doc "Internal function to convert doubles to absolute values.
   This duplicates the C implementations in Java, in case there is are corner-case differences."
    :private true
@@ -236,12 +236,12 @@
 (def ^{:private true} HI-y (+ (* 2 ypos) HI))
 (def ^{:private true} LO-y (+ (* 2 ypos) LO))
 
-(defn ilogb
+(defn #?(:clj ^double :cljs ^number) ilogb
   {:doc "internal function for ilogb(x)"
    :private true}
   [hx lx]
   (if (< hx 0x00100000) ;; subnormal
-    (let [hx-zero? (= 0 hx)
+    (let [hx-zero? (zero? hx)
           start-ix (if hx-zero? -1043 -1022)
           start-i (if hx-zero? lx (<< hx 11))]
       (loop [ix start-ix i start-i]
@@ -250,7 +250,7 @@
           (recur (dec ix) (<< i 1)))))
     (- (>> hx 20) 1023)))
 
-(defn setup-hl
+(defn #?(:clj ^double :cljs ^number) setup-hl
   {:doc "internal function to setup and align integer words"
    :private true}
   [i h l]
@@ -261,7 +261,7 @@
         [(bit-or (<< h n) (>>> l (- 32 n))) (<< l n)]
         [(<< l (- n 32)) 0]))))
 
-(defn IEEE-fmod
+(defn #?(:clj ^double :cljs ^number) IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
   Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_fmod.c
@@ -269,7 +269,7 @@
   Fortunately the values that are shifted are expected to be 32 bit signed."}
   [x y]
   ;; return exception values
-  (if (or (zero? y) (js/Number.isNaN y) (not (js/Number.isFinite x)))
+  (if (or (zero? y) ^boolean (js/isNaN y) (not (js/isFinite x)))
     ##NaN
 
     ;; create a buffer large enough for 2 doubles
@@ -343,7 +343,7 @@
                 (* (aget d xpos) 1.0))))
           (catch #?(:clj Exception :cljs :default) _ (aget Zero (>>> sx 31))))))))
 
-(defn IEEE-remainder
+(defn #?(:clj ^double :cljs ^number) IEEE-remainder
   {:doc "Returns the remainder per IEEE 754 such that
     remainder = dividend - divisor * n
    where n is the integer closest to the exact value of dividend / divisor.
@@ -360,12 +360,12 @@
   ;; check for exception values
   (cond
     (zero? divisor) ##NaN
-    (js/Number.isNaN divisor) ##NaN
+    ^boolean (js/isNaN divisor) ##NaN
     ;; check if dividend is ##Inf ##-Inf or ##NaN
-    (js/Number.isNaN dividend) ##NaN
-    (not (js/Number.isFinite dividend)) ##NaN
+    ^boolean (js/isNaN dividend) ##NaN
+    (not (js/isFinite dividend)) ##NaN
     ;; dividend is finish, check if divisor is infinite
-    (not (js/Number.isFinite divisor)) dividend
+    (not (js/isFinite divisor)) dividend
 
     :default
     ;; create a buffer large enough for 2 doubles
@@ -421,7 +421,7 @@
               ;; retrieve the updated dividend
               (aget d 0))))))))
 
-(defn ceil
+(defn #?(:clj ^double :cljs ^number) ceil
   {:doc "Returns the smallest double greater than or equal to a, and equal to a
   mathematical integer.
   If a is ##NaN or ##Inf or ##-Inf or already equal to an integer => a
@@ -429,11 +429,11 @@
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/ceil"
    :added "1.10.892"}
   [a]
-  (if a
+  (if (some? a)
     (Math/ceil a)
     (throw (ex-info "Unexpected Null passed to ceil" {:fn "ceil"}))))
 
-(defn floor
+(defn #?(:clj ^double :cljs ^number) floor
   {:doc "Returns the largest double less than or equal to a, and equal to a
   mathematical integer.
   If a is ##NaN or ##Inf or ##-Inf or already equal to an integer => a
@@ -442,11 +442,11 @@
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor"
    :added "1.10.892"}
   [a]
-  (if a
+  (if (some? a)
     (Math/floor a)
     (throw (ex-info "Unexpected Null passed to floor" {:fn "floor"}))))
 
-(defn copy-sign
+(defn #?(:clj ^double :cljs ^number) copy-sign
   {:doc "Returns a double with the magnitude of the first argument and the sign of
   the second.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#copySign-double-double-"
@@ -473,7 +473,7 @@
       ;; retrieve the full magnitude value with the updated byte
       (aget d 0))))
 
-(defn rint
+(defn #?(:clj ^double :cljs ^number) rint
   {:doc "Returns the double closest to a and equal to a mathematical integer.
   If two values are equally close, return the even one.
   If a is ##NaN or ##Inf or ##-Inf or zero => a
@@ -486,7 +486,7 @@
             (- (d+ TWO-TO-THE-52 a) TWO-TO-THE-52) a)]
     (* sign a)))
 
-(defn atan2
+(defn #?(:clj ^double :cljs ^number) atan2
   {:doc "Returns the angle theta from the conversion of rectangular coordinates (x, y) to polar coordinates (r, theta).
   Computes the phase theta by computing an arc tangent of y/x in the range of -pi to pi.
   For more details on special cases, see:
@@ -494,27 +494,29 @@
    :added "1.10.892"}
   [y x] (Math/atan2 y x))
 
-(defn pow
+(defn #?(:clj ^double :cljs ^number) pow
   {:doc "Returns the value of a raised to the power of b.
   For more details on special cases, see:
   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow"
    :added "1.10.892"}
   [a b] (Math/pow a b))
 
-(defn round
+(defn #?(:clj ^double :cljs ^number) round
   {:doc "Returns the closest long to a. If equally close to two values, return the one
   closer to ##Inf.
   If a is ##NaN => 0
-  If a is ##-Inf => ##-Inf
-  If a is ##Inf => ##Inf
+  If a is ##-Inf => js/Number.MIN_SAFE_INTEGER
+  If a is ##Inf => js/Number/MAX_SAFE_INTEGER
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round"
    :added "1.10.892"}
   [a]
-  (if (js/Number.isNaN a)
-    0
-    (Math/round a)))
+  (cond
+    ^boolean (js/isNaN a) 0
+    ^boolean (js/isFinite a) (Math/round a)
+    (== ##Inf a) js/Number.MAX_SAFE_INTEGER
+    :default js/Number.MIN_SAFE_INTEGER))
 
-(defn random
+(defn #?(:clj ^double :cljs ^number) random
   {:doc "Returns a positive double between 0.0 and 1.0, chosen pseudorandomly with
   approximately random distribution. Not cryptographically secure. The seed is chosen internally
   and cannot be selected.
@@ -522,7 +524,7 @@
    :added "1.10.892"}
   [] (Math/random))
 
-(defn add-exact
+(defn #?(:clj ^long :cljs ^number) add-exact
   {:doc "Returns the sum of x and y, throws an exception on overflow. "
    :added "1.10.892"}
   [x y]
@@ -531,7 +533,7 @@
       (throw (ex-info "Integer overflow" {:fn "add-exact"}))
       r)))
 
-(defn subtract-exact
+(defn #?(:clj ^long :cljs ^number) subtract-exact
   {:doc "Returns the difference of x and y, throws ArithmeticException on overflow. "
    :added "1.10.892"}
   [x y]
@@ -540,7 +542,7 @@
       (throw (ex-info "Integer overflow" {:fn "subtract-exact"}))
       r)))
 
-(defn multiply-exact
+(defn #?(:clj ^long :cljs ^number) multiply-exact
   {:doc "Returns the product of x and y, throws ArithmeticException on overflow. "
    :added "1.10.892"}
   [x y]
@@ -549,23 +551,23 @@
       (throw (ex-info "Integer overflow" {:fn "multiply-exact"}))
       r)))
 
-(defn increment-exact
+(defn #?(:clj ^long :cljs ^number) increment-exact
   {:doc "Returns a incremented by 1, throws ArithmeticException on overflow."
    :added "1.10.892"}
   [a]
-  (if (= a js/Number.MAX_SAFE_INTEGER)
+  (if (== a js/Number.MAX_SAFE_INTEGER)
     (throw (ex-info "Integer overflow" {:fn "increment-exact"}))
-    (+ a 1)))
+    (inc a)))
 
-(defn decrement-exact
+(defn #?(:clj ^long :cljs ^number) decrement-exact
   {:doc "Returns a decremented by 1, throws ArithmeticException on overflow. "
    :added "1.10.892"}
   [a]
-  (if (= a js/Number.MIN_SAFE_INTEGER)
+  (if (== a js/Number.MIN_SAFE_INTEGER)
     (throw (ex-info "Integer overflow" {:fn "decrement-exact"}))
-    (- a 1)))
+    (dec a)))
 
-(defn negative-exact
+(defn #?(:clj ^long :cljs ^number) negative-exact
   {:doc "Returns the negation of a, throws ArithmeticException on overflow. "
    :added "1.10.892"}
   [a]
@@ -573,30 +575,37 @@
     (throw (ex-info "Integer overflow" {:fn "negative-exact"}))
     (- a)))
 
-(defn xor [a b] (or (and a (not b)) (and (not a) b)))
+(defn xor [^boolean a ^boolean b] (or (and a (not b)) (and (not a) b)))
 
-(defn floor-div
+(defn #?(:clj ^long :cljs ^number) floor-div
   {:doc "Integer division that rounds to negative infinity (as opposed to zero).
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorDiv-long-long-"
    :added "1.10.892"}
   [x y]
   (if-not (and (js/Number.isInteger x) (js/Number.isInteger y))
-    (throw (ex-info "Integer operation called with non-integer arguments"
-                    {:x-int? (js/Number.isInteger x :y-int? (js/Number.isInteger y))}))
+    (throw (ex-info "floor-div called with non-integer arguments"
+                    {:x-int? (js/isInteger x :y-int? (js/isInteger y))}))
     (let [r (long (/ x y))]
-      (if (and (xor (< x 0) (< y 0)) (not= (* r y) x))
+      (if (and (xor (< x 0) (< y 0)) (not (== (* r y) x)))
         (dec r)
         r))))
 
-(defn floor-mod
+(defn #?(:clj ^long :cljs ^number) floor-mod
   {:doc "Integer modulus x - (floorDiv(x, y) * y). Sign matches y and is in the
   range -|y| < r < |y|.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorMod-long-long-"
    :added "1.10.892"}
   [x y]
-  (- x (* y (floor-div x y))))
+  (if-not (and (js/Number.isInteger x) (js/Number.isInteger y))
+    (throw (ex-info "floor-mod called with non-integer arguments"
+                    {:x-int? (js/isInteger x :y-int? (js/isInteger y))}))
+    ;; this avoids using floor-div to keep within the safe integer range
+    (let [r (long (/ x y))]
+      (if (and (xor (< x 0) (< y 0)) (not (== (* r y) x)))
+        (+ (- x (* y r)) y)
+        (- x (* y r))))))
 
-(defn abs
+(defn #?(:clj ^double :cljs ^number) abs
   {:doc "Returns the absolute value of a (long or double).
   If not negative, a is returned, else negation of a is returned.
   If a < Number/MIN_SAFE_INTEGER => undefined (approximately -a)
@@ -624,7 +633,7 @@
   (Math/min p0 p1))
 
 
-(defn get-exponent
+(defn #?(:clj ^double :cljs ^number) get-exponent
   {:doc "Returns the exponent of d.
   If d is ##NaN, ##Inf, ##-Inf => Double/MAX_EXPONENT + 1
   If d is zero or subnormal => Double/MIN_EXPONENT - 1
@@ -632,7 +641,7 @@
    :added "1.10.892"}
   [d]
   (cond
-    (or (js/Number.isNaN d) (not (js/Number.isFinite d))) (inc EXP-MAX)
+    (or ^boolean (js/isNaN d) (not (js/isFinite d))) (inc EXP-MAX)
     (zero? d) (dec EXP-MIN)
     :default (let [a (js/ArrayBuffer. 8)
                    f (js/Float64Array. a)
@@ -641,7 +650,7 @@
                (aset f 0 d)
                (- (>> (bit-and (aget i hi) EXP-BITMASK32) (dec SIGNIFICAND-WIDTH32)) EXP-BIAS))))
 
-(defn hi-lo->double
+(defn #?(:clj ^double :cljs ^number) hi-lo->double
   {:doc "Converts a pair of 32 bit integers into an IEEE-754 64 bit floating point number.
   h is the high 32 bits, l is the low 32 bits."
    :private true}
@@ -653,7 +662,7 @@
     (aset i HI h)
     (aget f 0)))
 
-(defn power-of-two
+(defn #?(:clj ^double :cljs ^number) power-of-two
   {:doc "returns a floating point power of two in the normal range"
    :private true}
   [n]
@@ -661,7 +670,7 @@
   (hi-lo->double
    (bit-and (<< (+ n EXP-BIAS) (dec SIGNIFICAND-WIDTH32)) EXP-BITMASK32) 0))
 
-(defn ulp
+(defn #?(:clj ^double :cljs ^number) ulp
   {:doc "Returns the size of an ulp (unit in last place) for d.
   If d is ##NaN => ##NaN
   If d is ##Inf or ##-Inf => ##Inf
@@ -671,8 +680,8 @@
    :added "1.10.892"}
   [d]
   (cond
-    (js/Number.isNaN d) d
-    (js/Number.isFinite d)
+    ^boolean (js/isNaN d) d
+    ^boolean (js/isFinite d)
     (let [e (get-exponent d)]
       (case e
         1024 (abs d)  ;; EXP-MAX + 1
@@ -686,18 +695,18 @@
                 (hi-lo->double (<< 1 (- shift 32)) 0)))))))
     :default ##Inf))
 
-(defn signum
+(defn #?(:clj ^double :cljs ^number) signum
   {:doc "Returns the signum function of d - zero for zero, 1.0 if >0, -1.0 if <0.
   If d is ##NaN => ##NaN
   If d is ##Inf or ##-Inf => sign of d
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#signum-double-"
    :added "1.10.892"}
   [d]
-  (if (or (= 0.0 d) (js/Number.isNaN d))
+  (if (or (zero? d) ^boolean (js/isNaN d))
     d
     (copy-sign 1.0 d)))
 
-(defn sinh
+(defn #?(:clj ^double :cljs ^number) sinh
   {:doc "Returns the hyperbolic sine of x, (e^x - e^-x)/2.
   If x is ##NaN => ##NaN
   If x is ##Inf or ##-Inf or zero => x
@@ -705,7 +714,7 @@
    :added "1.10.892"}
   [x] (Math/sinh x))
 
-(defn cosh
+(defn #?(:clj ^double :cljs ^number) cosh
   {:doc "Returns the hyperbolic cosine of x, (e^x + e^-x)/2.
   If x is ##NaN => ##NaN
   If x is ##Inf or ##-Inf => ##Inf
@@ -714,7 +723,7 @@
    :added "1.10.892"}
   [x] (Math/cosh x))
 
-(defn tanh
+(defn #?(:clj ^double :cljs ^number) tanh
   {:doc "Returns the hyperbolic tangent of x, sinh(x)/cosh(x).
   If x is ##NaN => ##NaN
   If x is zero => zero, with same sign
@@ -724,7 +733,7 @@
    :added "1.10.892"}
   [x] (Math/tanh x))
 
-(defn hypot
+(defn #?(:clj ^double :cljs ^number) hypot
   {:doc "Returns sqrt(x^2 + y^2) without intermediate underflow or overflow.
   If x or y is ##Inf or ##-Inf => ##Inf
   If x or y is ##NaN and neither is ##Inf or ##-Inf => ##NaN
@@ -732,7 +741,7 @@
    :added "1.10.892"}
   [x y] (Math/hypot x y))
 
-(defn expm1
+(defn #?(:clj ^double :cljs ^number) expm1
   {:doc "Returns e^x - 1. Near 0, expm1(x)+1 is more accurate to e^x than exp(x).
   If x is ##NaN => ##NaN
   If x is ##Inf => #Inf
@@ -742,7 +751,7 @@
    :added "1.10.892"}
   [x] (Math/expm1 x))
 
-(defn log1p
+(defn #?(:clj ^double :cljs ^number) log1p
   {:doc "Returns ln(1+x). For small values of x, log1p(x) is more accurate than
   log(1.0+x).
   If x is ##NaN or ##-Inf or < -1 => ##NaN
@@ -752,7 +761,7 @@
    :added "1.10.892"}
   [x] (Math/log1p x))
 
-(defn add64
+(defn #?(:clj ^double :cljs ^number) add64
   {:doc "Takes the high and low words for 2 different 64 bit integers, and adds them.
   This handles overflow from the low-order words into the high order words."
    :private true}
@@ -767,7 +776,7 @@
         hr (+ hx hy c32)]
     [hr lr]))
 
-(defn next-after
+(defn #?(:clj ^double :cljs ^number) next-after
   {:doc "Returns the adjacent floating point number to start in the direction of
   the second argument. If the arguments are equal, the second is returned.
   If either arg is #NaN => #NaN
@@ -815,7 +824,7 @@
       (= start direction) direction
       :default (d+ start direction))))  ;; isNaN(start) || isNaN(direction)
 
-(defn next-up
+(defn #?(:clj ^double :cljs ^number) next-up
   {:doc "Returns the adjacent double of d in the direction of ##Inf.
   If d is ##NaN => ##NaN
   If d is ##Inf => ##Inf
@@ -841,7 +850,7 @@
     ;; d is NaN or +Infinity
     d))
 
-(defn next-down
+(defn #?(:clj ^double :cljs ^number) next-down
   {:doc "Returns the adjacent double of d in the direction of ##-Inf.
   If d is ##NaN => ##NaN
   If d is ##Inf => Double/MAX_VALUE
@@ -850,8 +859,8 @@
    :added "1.10.892"}
   [d]
   (cond
-    (or (js/Number.isNaN d) (= ##-Inf d)) d
-    (= d 0.0) (- MIN-FLOAT-VALUE)
+    (or ^boolean (js/isNaN d) (= ##-Inf d)) d
+    (zero? d) (- MIN-FLOAT-VALUE)
     :default
     (let [a (js/ArrayBuffer. 8)
           f (js/Float64Array. a)
@@ -872,7 +881,7 @@
 
 (def ^:private two-to-the-double-scale-down (power-of-two -512))
 
-(defn scalb
+(defn #?(:clj ^double :cljs ^number) scalb
   {:doc "Returns d * 2^scaleFactor, scaling by a factor of 2. If the exponent
   is between Double/MIN_EXPONENT and Double/MAX_EXPONENT, the answer is exact.
   scaleFactor is an integer

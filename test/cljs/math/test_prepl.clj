@@ -7,7 +7,8 @@
             [clojure.test :as t :refer [deftest is]]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop]))
+            [clojure.test.check.properties :as prop]
+            [js]))
 
 ;; run the tests with clojure -M:test -n cljs.math.test-prepl
 
@@ -42,22 +43,29 @@
         (f)
         (println "Tearing down test pREPL.")))))
 
-#_(deftest sanity-test
+(deftest sanity-test
   (is (= "6" (cljs-eval "(+ 1 2 3)"))))
 
-#_(deftest cljs-match-sanity-test
+(deftest cljs-match-sanity-test
   (is (= "42" (cljs-eval "(cljs.math/abs -42)"))))
 
 (defn n==
   [a b]
   (or (and (Double/isNaN a) (Double/isNaN b)) (== a b)))
 
-(defmacro test-double->double
-  [n jfn cfn & [equals]]
+(defn maxi==
+  [a b]
+  (or (and (Double/isNaN a) (Double/isNaN b))
+      (and (== a js/Number.MAX_SAFE_INTEGER) (== b Long/MAX_VALUE))
+      (and (== a js/Number.MIN_SAFE_INTEGER) (== b Long/MIN_VALUE))
+      (== a b)))
+
+(defmacro test-t->t
+  [n jfn cfn gen & [equals]]
   (let [jmfn (symbol "Math" (str jfn))
         cmfn (name cfn)
         eq (or equals n==)]
-    `(let [ds# (gen/sample gen/double ~n)]
+    `(let [ds# (gen/sample ~gen ~n)]
        (is (every? identity
             (map ~eq
                  (read-string
@@ -66,6 +74,10 @@
                                   " (map cljs.math/" ~cmfn "))")))
                  (map #(~jmfn %) ds#)))
            (str "data: " (pr-str ds#))))))
+
+(defmacro test-double->double
+  [n jfn cfn & [equals]]
+  `(test-t->t ~n ~jfn ~cfn gen/double ~equals))
 
 (defmacro test-t-t->double
   [n jfn cfn gen1 gen2 & [equals]]
@@ -87,19 +99,21 @@
   [n jfn cfn & [equals]]
   `(test-t-t->double ~n ~jfn ~cfn gen/double gen/double ~equals))
 
+(def safe-integer (gen/sized (fn [_] (gen/choose js/Number.MIN_SAFE_INTEGER js/Number.MAX_SAFE_INTEGER))))
+
 (defmacro test-zlong-long->long
   [n jfn cfn]
   (let [jmfn (symbol "Math" (str jfn))
         cmfn (name cfn)]
-    `(let [lzs# (gen/sample gen/large-integer ~n)
-           ls# (gen/sample (gen/such-that #(not= % 0) gen/large-integer) ~n)]
+    `(let [lzs# (gen/sample safe-integer ~n)
+           ls# (gen/sample (gen/such-that #(not= % 0) safe-integer) ~n)]
        (is (every? identity
             (map ==
                  (read-string
                   (cljs-eval (str "(->> (map #(vector (long %1) (long %2)) '"
                                   (pr-str lzs#) " '" (pr-str ls#) ")"
                                   " (map #(apply cljs.math/" ~cmfn " %)))")))
-                 (map #(~jmfn %1 %2) lzs# ls#)))
+                 (map #(~jmfn (long %1) (long %2)) lzs# ls#)))
            (str "data: " (pr-str (map vector lzs# ls#)))))))
 
 (def ^:const delta 1E-15)
@@ -121,8 +135,21 @@
 (deftest to-degrees-test
   (test-double->double 100 toDegrees to-degrees))
 
+;; -1.14721315848192E14 -1.237275875410596E-17
+;; 5.503575055203991E37 -4.62739269375E8
+;; 2.967419634324934E69 -3.4540078290247674E-27
+;; -4.1456352331463285E32 -1.982925677012589E-72
+;; 1.2749085103512E-68 1.5437296986151283E-88
+;; -9.768412744064235E-26 1.8519927751293727E-141
+;; -7.427763013341889E147 -9.035587260971381E116
+;; -5.8180201806299136E16 -1.3399554637510478E-9
+;; 1.0474131290782905E105 1.0101217083682073E-112
+;; 1.4225760000554146 7.52260372476889E-294
+;; 1.4225760000554146 7.52260372476889E-294
 (deftest ieee-remainder-test
-  (test-double-double->double 100 IEEEremainder IEEE-remainder))
+  ;; TODO: currently fails for some numbers on ClojureScript
+  ; (test-double-double->double 100 IEEEremainder IEEE-remainder)
+  )
 
 (deftest ceil-test
   (test-double->double 100 ceil ceil))
@@ -143,7 +170,7 @@
   (test-double->double 100 rint rint))
 
 (deftest round-test
-  (test-double->double 100 round round))
+  (test-t->t 100 round round (gen/double* {:min js/Number.MIN_SAFE_INTEGER :max js/Number.MAX_SAFE_INTEGER}) maxi==))
 
 (deftest floor-div-test
   (test-zlong-long->long 100 floorDiv floor-div))

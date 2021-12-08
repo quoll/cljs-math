@@ -5,9 +5,9 @@
   (:refer-clojure :exclude [aset aget +])
   (:import [java.nio ByteBuffer IntBuffer DoubleBuffer]))
 
-(def Number.MAX_SAFE_INTEGER  9007199254740991)
-(def Number.MIN_SAFE_INTEGER -9007199254740991)
-(def Number.POSITIVE_INFINITY ##Inf)
+(def ^:const Number.MAX_SAFE_INTEGER  9007199254740991)
+(def ^:const Number.MIN_SAFE_INTEGER -9007199254740991)
+(def ^:const Number.POSITIVE_INFINITY ##Inf)
 
 (defn Number.isNaN
   [^double d]
@@ -16,6 +16,11 @@
 (defn Number.isFinite
   [^double d]
   (not (Double/isInfinite d)))
+
+(defn Number.isSafeInteger
+  [n]
+  (and (>= n -9007199254740991)
+       (<= n 9007199254740991)))
 
 (def Number.isInteger int?)
 
