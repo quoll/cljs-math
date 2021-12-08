@@ -64,6 +64,8 @@
 
 (def ^{:private true :doc "offset of hi integers in 64-bit values"} LO (- 1 HI))
 
+(def ^{:private true :const true} INT32-MASK 0xFFFFFFFF)
+
 (def ^{:private true :const true} INT32-NON-SIGN-BIT 0x80000000)
 
 (def ^{:private true :const true} INT32-NON-SIGN-BITS 0x7FFFFFFF)
@@ -263,6 +265,15 @@
         [(bit-or (<< h n) (>>> l (- 32 n))) (<< l n)]
         [(<< l (- n 32)) 0]))))
 
+(defn print-hex
+  [label v]
+  #?(:clj (println (str label "= " (Long/toHexString v)))
+     :cljs (let [vs (if (>= v 0)
+                      (.toString v 16)
+                      (str (.toString (>>> (bit-or 0 v) 16) 16)
+                           (.toString (bit-and v 0xffff) 16) ", " (.toString v 16)))]
+             (println (str label "= " vs)))))
+
 (defn ^number IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
@@ -315,7 +326,7 @@
                                             (if (zero? (bit-or hz lz))
                                               (throw (ex-info "Signed zero" {:zero true}))
                                               [(+ hz hz (>>> lz 31)) (+ lz lz)]))]
-                              (recur (dec n) hx lx))))
+                              (recur (dec n) (bit-and INT32-MASK hx) (bit-and INT32-MASK lx)))))
                 hz (if (u< lx ly) (- hx hy 1) (- hx hy))
                 lz (- lx ly)
                 [hx lx] (if (>= hz 0) [hz lz] [hx lx])

@@ -147,9 +147,7 @@
 ;; 1.4225760000554146 7.52260372476889E-294
 ;; 1.4225760000554146 7.52260372476889E-294
 (deftest ieee-remainder-test
-  ;; TODO: currently fails for some numbers on ClojureScript
-  ; (test-double-double->double 100 IEEEremainder IEEE-remainder)
-  )
+  (test-double-double->double 100 IEEEremainder IEEE-remainder))
 
 (deftest ceil-test
   (test-double->double 100 ceil ceil))
