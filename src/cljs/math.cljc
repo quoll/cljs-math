@@ -606,7 +606,7 @@
     ;; this avoids using floor-div to keep within the safe integer range
     (let [r (long (/ x y))]
       (if (and (xor (< x 0) (< y 0)) (not (== (* r y) x)))
-        (+ (- x (* y r)) y)
+        (- x (* y r) (- y))
         (- x (* y r))))))
 
 (defn ^number abs

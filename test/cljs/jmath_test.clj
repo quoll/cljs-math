@@ -82,13 +82,19 @@
   (prop/for-all [a gen/double]
     (d= (m/rint a) (Math/rint a))))
 
+(defn max=
+  [a b]
+  (or (= a b)
+      (and (= a js/Number.MAX_SAFE_INTEGER) (= b Long/MAX_VALUE))
+      (and (= a js/Number.MIN_SAFE_INTEGER) (= b Long/MIN_VALUE))))
+
 (defspec round-test 1000
   (prop/for-all [a gen/double]
-    (= (m/round a) (Math/round a))))
+    (max= (m/round a) (Math/round a))))
 
 (defspec floor-div-test 1000
   (prop/for-all [x gen/large-integer y (gen/such-that #(not= % 0) gen/large-integer)]
-    (= (m/floor-div x y) (Math/floorDiv x y))))
+    (= (m/floor-div x y) (Math/floorDiv ^long x ^long y))))
 
 (defspec floor-mod-test 1000
   (prop/for-all [x gen/large-integer y (gen/such-that #(not= % 0) gen/large-integer)]
