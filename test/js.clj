@@ -9,13 +9,17 @@
 (def ^:const Number.MIN_SAFE_INTEGER -9007199254740991)
 (def ^:const Number.POSITIVE_INFINITY ##Inf)
 
-(defn Number.isNaN
+(defn isNaN
   [^double d]
   (Double/isNaN d))
 
-(defn Number.isFinite
+(defn isFinite
   [^double d]
   (not (Double/isInfinite d)))
+
+(defn isInteger
+  [^double d]
+  (int? d))
 
 (defn Number.isSafeInteger
   [n]

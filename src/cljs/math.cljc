@@ -577,7 +577,9 @@
     (throw (ex-info "Integer overflow" {:fn "negative-exact"}))
     (- a)))
 
-(defn xor [^boolean a ^boolean b] (or (and a (not b)) (and (not a) b)))
+(defn xor
+  #?(:clj [a b] :cljs [^boolean a ^boolean b])
+  (or (and a (not b)) (and (not a) b)))
 
 (defn ^number floor-div
   {:doc "Integer division that rounds to negative infinity (as opposed to zero).
