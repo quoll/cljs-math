@@ -265,15 +265,6 @@
         [(bit-or (<< h n) (>>> l (- 32 n))) (<< l n)]
         [(<< l (- n 32)) 0]))))
 
-(defn print-hex
-  [label v]
-  #?(:clj (println (str label "= " (Long/toHexString v)))
-     :cljs (let [vs (if (>= v 0)
-                      (.toString v 16)
-                      (str (.toString (>>> (bit-or 0 v) 16) 16)
-                           (.toString (bit-and v 0xffff) 16) ", " (.toString v 16)))]
-             (println (str label "= " vs)))))
-
 (defn ^number IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
