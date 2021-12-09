@@ -590,7 +590,7 @@
   [x y]
   (if-not (and (js/Number.isInteger x) (js/Number.isInteger y))
     (throw (ex-info "floor-div called with non-integer arguments"
-                    {:x-int? (js/isInteger x :y-int? (js/isInteger y))}))
+                    {:x-int? (js/Number.isInteger x) :y-int? (js/Number.isInteger y)}))
     (let [r (long (/ x y))]
       (if (and (xor (< x 0) (< y 0)) (not (== (* r y) x)))
         (dec r)
@@ -604,7 +604,7 @@
   [x y]
   (if-not (and (js/Number.isInteger x) (js/Number.isInteger y))
     (throw (ex-info "floor-mod called with non-integer arguments"
-                    {:x-int? (js/isInteger x :y-int? (js/isInteger y))}))
+                    {:x-int? (js/Number.isInteger x) :y-int? (js/Number.isInteger y)}))
     ;; this avoids using floor-div to keep within the safe integer range
     (let [r (long (/ x y))]
       (if (and (xor (< x 0) (< y 0)) (not (== (* r y) x)))
