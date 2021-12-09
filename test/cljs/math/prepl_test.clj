@@ -2,7 +2,7 @@
       cljs-math implementations on a ClojureScript instance running on NodeJS.
       Tests are generative, but not run through the defspec framework to minimize
       i/o to the ClojureScript instance."
-      :authors ["Michel Borkent" "Paula Gearon"]}
+      :authors ["Michiel Borkent" "Paula Gearon"]}
     cljs.math.prepl-test
     (:require [cljs.core.server]
               [cljs.repl.node]
