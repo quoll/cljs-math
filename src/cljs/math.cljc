@@ -12,12 +12,14 @@
   ^{:doc "Constant for Euler's number e, the base for natural logarithms.
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/E"
     :added "1.10.892"
+    :tag number
     :const true} E Math/E)
 
 (def
   ^{:doc "Constant for pi, the ratio of the circumference of a circle to its diameter.
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/PI"
     :added "1.10.892"
+    :tag number
     :const true} PI Math/PI)
 
 (def
