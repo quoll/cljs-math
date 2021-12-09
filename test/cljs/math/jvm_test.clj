@@ -1,10 +1,14 @@
-(ns cljs.jmath-test
-  (:require [cljs.math :as m]
-            [clojure.test :refer [deftest is testing run-tests]]
-            [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop])
-  (:import [clojure.lang ExceptionInfo]))
+(ns ^{:doc "Tests cljs-math to compare between JVM provided functions and the
+      cljs-math implementations running on a JVM. JS constants and functions
+      are mocked out in the 'js' namespace."
+      :author "Paula Gearon"}
+    cljs.math.jvm-test
+    (:require [cljs.math :as m]
+              [clojure.test :refer [deftest is testing run-tests]]
+              [clojure.test.check.clojure-test :refer [defspec]]
+              [clojure.test.check.generators :as gen]
+              [clojure.test.check.properties :as prop])
+    (:import [clojure.lang ExceptionInfo]))
 
 (defn hex2
   [n]
@@ -14,6 +18,8 @@
 (defn buffer-str
   [x]
   (Long/toHexString (Double/doubleToRawLongBits x)))
+
+;; start with some simple function calls
 
 (deftest test-fmod
   (testing "The fmod function"
@@ -38,6 +44,8 @@
       (is (= "3f27dae7fd100000" (buffer-str b)))
       (is (= -0.00018199998751811108 c))
       (is (= "bf27dae7fd100000" (buffer-str c))))))
+
+;; Generative tests on all functions
 
 (defn d= [a b] (or (= a b) (and (Double/isNaN a) (Double/isNaN b))))
 

@@ -1,16 +1,19 @@
-(ns cljs.math.test-prepl
-  (:require [cljs.core.server]
-            [cljs.repl.node]
-            [clojure.core.server :as server]
-            [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [clojure.test :as t :refer [deftest is]]
-            [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop]
-            [js]))
-
-;; run the tests with clojure -M:test -n cljs.math.test-prepl
+(ns ^{:doc "Tests cljs-math to compare between JVM provided functions and the
+      cljs-math implementations on a ClojureScript instance running on NodeJS.
+      Tests are generative, but not run through the defspec framework to minimize
+      i/o to the ClojureScript instance."
+      :authors ["Michel Borkent" "Paula Gearon"]}
+    cljs.math.prepl-test
+    (:require [cljs.core.server]
+              [cljs.repl.node]
+              [clojure.core.server :as server]
+              [clojure.edn :as edn]
+              [clojure.java.io :as io]
+              [clojure.test :as t :refer [deftest is]]
+              [clojure.test.check.clojure-test :refer [defspec]]
+              [clojure.test.check.generators :as gen]
+              [clojure.test.check.properties :as prop]
+              [js]))
 
 (def reader (atom nil))
 (def writer (atom nil))
