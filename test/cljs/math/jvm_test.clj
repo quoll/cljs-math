@@ -248,8 +248,6 @@
   (prop/for-all [d gen/double]
     (d= (m/next-down d) (Math/nextDown d))))
 
-;; Want to generate the full range of Integer. |Integer/MIN_VALUE| = 1+Integer/MAX_VALUE
 (defspec scalb-test 1000
-  (prop/for-all [d gen/double scale-factor (gen/such-that #(<= % Integer/MAX_VALUE)
-                                                          (gen/resize (inc Integer/MAX_VALUE) gen/small-integer))]
+  (prop/for-all [d gen/double scale-factor (gen/choose Integer/MIN_VALUE Integer/MAX_VALUE)]
     (d= (m/scalb d scale-factor) (Math/scalb d scale-factor))))
