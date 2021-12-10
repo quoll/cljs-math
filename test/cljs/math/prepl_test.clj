@@ -54,14 +54,17 @@
 
 (defn n==
   [a b]
-  (or (and (Double/isNaN a) (Double/isNaN b)) (== a b)))
+  (or (and (Double/isNaN a) (Double/isNaN b))
+      (and (number? a) (number? b) (== a b))
+      (= a b)))
 
 (defn maxi==
   [a b]
   (or (and (Double/isNaN a) (Double/isNaN b))
-      (and (== a js/Number.MAX_SAFE_INTEGER) (== b Long/MAX_VALUE))
-      (and (== a js/Number.MIN_SAFE_INTEGER) (== b Long/MIN_VALUE))
-      (== a b)))
+      (and (= a js/Number.MAX_SAFE_INTEGER) (= b Long/MAX_VALUE))
+      (and (= a js/Number.MIN_SAFE_INTEGER) (= b Long/MIN_VALUE))
+      (and (number? a) (number? b) (== a b))
+      (= a b)))
 
 (defmacro test-t->t
   [n jfn cfn gen & [equals]]
@@ -94,7 +97,7 @@
                  (read-string
                   (cljs-eval (str "(->> (map #(vector %1 %2) '"
                                   (pr-str ds#) " '" (pr-str ds2#) ")"
-                                  " (map #(apply cljs.math/" ~cmfn " %)))")))
+                                  " (map #(try (apply cljs.math/" ~cmfn " %) (catch :default _ :exception))))")))
                  (map #(~jmfn %1 %2) ds# ds2#)))
            (str "data: " (pr-str (map vector ds# ds2#)))))))
 
@@ -104,6 +107,11 @@
 
 (def safe-integer (gen/sized (fn [_] (gen/choose js/Number.MIN_SAFE_INTEGER js/Number.MAX_SAFE_INTEGER))))
 
+(defn e==
+  [a b]
+  (or (and (number? a) (number? b) (== a b))
+      (= a b)))
+
 (defmacro test-zlong-long->long
   [n jfn cfn]
   (let [jmfn (symbol "Math" (str jfn))
@@ -111,11 +119,11 @@
     `(let [lzs# (gen/sample safe-integer ~n)
            ls# (gen/sample (gen/such-that #(not= % 0) safe-integer) ~n)]
        (is (every? identity
-            (map ==
+            (map e==
                  (read-string
                   (cljs-eval (str "(->> (map #(vector (long %1) (long %2)) '"
                                   (pr-str lzs#) " '" (pr-str ls#) ")"
-                                  " (map #(apply cljs.math/" ~cmfn " %)))")))
+                                  " (map #(try (apply cljs.math/" ~cmfn " %) (catch :default _ :exception))))")))
                  (map #(~jmfn (long %1) (long %2)) lzs# ls#)))
            (str "data: " (pr-str (map vector lzs# ls#)))))))
 
@@ -194,3 +202,62 @@
                     (gen/such-that
                      #(<= % MAX-INT)
                      (gen/resize (inc MAX-INT) gen/small-integer))))
+
+;; utililties for the -exact tests
+(def safe-integer (gen/choose js/Number.MIN_SAFE_INTEGER js/Number.MAX_SAFE_INTEGER))
+
+(defn no-overflow?
+  [f ^long x ^long y]
+  (try
+    (js/Number.isSafeInteger (f x y))
+    (catch ArithmeticException _ false)))
+
+(defmacro test-safe-safe->safe
+  [n jfn cfn op]
+  (let [jmfn (symbol "Math" (str jfn))
+        cmfn (name cfn)]
+    `(let [ls1# (gen/sample safe-integer ~n)
+           ls2# (gen/sample safe-integer ~n)]
+       (is (every? identity
+                   (map e==
+                        (read-string
+                         (cljs-eval (str "(->> (map #(vector (long %1) (long %2)) '"
+                                         (pr-str ls1#) " '" (pr-str ls2#) ")"
+                                         " (map (fn [[a b]]"
+                                         "        (try (cljs.math/" ~cmfn "  a b)"
+                                         "          (catch :default _ :exception)))))")))
+                        (map #(if (no-overflow? ~op %1 %2)
+                                (~jmfn (long %1) (long %2))
+                                :exception) ls1# ls2#)))
+           (str "data: " (pr-str (map vector ls1# ls2#)))))))
+
+(deftest add-exact-test
+  (test-safe-safe->safe 100 addExact add-exact +))
+
+(deftest subtract-exact
+  (test-safe-safe->safe 100 subtractExact subtract-exact -))
+
+(deftest multiply-exact
+  (test-safe-safe->safe 100 multiplyExact multiply-exact *))
+
+(defmacro test-safe->safe
+  [n jfn cfn op]
+  (let [jmfn (symbol "Math" (str jfn))
+        cmfn (name cfn)]
+    `(let [ls# (gen/sample safe-integer ~n)]
+       (is (every? identity
+                   (map e==
+                        (read-string
+                         (cljs-eval (str "(->> '" (pr-str ls#)
+                                         " (map #(try (cljs.math/" ~cmfn " %)"
+                                         "         (catch :default _ :exception))))")))
+                        (map #(if (no-overflow? ~op % 1)
+                                (~jmfn (long %))
+                                :exception) ls#)))
+           (str "data: " (pr-str (map vector ls#)))))))
+
+(deftest increment-exact
+  (test-safe->safe 100 incrementExact increment-exact +))
+
+(deftest decrement-exact
+  (test-safe->safe 100 decrementExact decrement-exact -))

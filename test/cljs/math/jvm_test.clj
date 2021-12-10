@@ -49,11 +49,86 @@
 
 (defn d= [a b] (or (= a b) (and (Double/isNaN a) (Double/isNaN b))))
 
+(def safe-integer (gen/choose js/Number.MIN_SAFE_INTEGER js/Number.MAX_SAFE_INTEGER))
+
+;; The following test functions that are wrappers for functionality provided in Math
 (defspec sin-test 100
   (prop/for-all [v gen/double]
     (d= (m/sin v) (Math/sin v))))
 
+(defspec cos-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/cos v) (Math/cos v))))
 
+(defspec tan-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/tan v) (Math/tan v))))
+
+(defspec asin-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/asin v) (Math/asin v))))
+
+(defspec acos-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/acos v) (Math/acos v))))
+
+(defspec atan-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/atan v) (Math/atan v))))
+
+(defspec exp-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/exp v) (Math/exp v))))
+
+(defspec log-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/log v) (Math/log v))))
+
+(defspec log10-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/log10 v) (Math/log10 v))))
+
+(defspec sqrt-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/sqrt v) (Math/sqrt v))))
+
+(defspec cbrt-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/cbrt v) (Math/cbrt v))))
+
+(defspec atan2-test 100
+  (prop/for-all [y gen/double x gen/double]
+    (d= (m/atan2 y x) (Math/atan2 y x))))
+
+(defspec pow-test 100
+  (prop/for-all [a gen/double b gen/double]
+    (d= (m/pow a b) (Math/pow a b))))
+
+(defspec sinh-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/sinh v) (Math/sinh v))))
+
+(defspec cosh-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/cosh v) (Math/cosh v))))
+
+(defspec tanh-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/tanh v) (Math/tanh v))))
+
+(defspec hypot-test 100
+  (prop/for-all [x gen/double y gen/double]
+    (d= (m/hypot x y) (Math/hypot x y))))
+
+(defspec expm1-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/expm1 v) (Math/expm1 v))))
+
+(defspec log1p-test 100
+  (prop/for-all [v gen/double]
+    (d= (m/log1p v) (Math/log1p v))))
+
+;; The following test functions that have been implemented by cljs-math
 (defspec to-radians-test 1000
   (prop/for-all [v gen/double]
     (d= (m/to-radians v) (Math/toRadians v))))
@@ -100,12 +175,53 @@
   (prop/for-all [a gen/double]
     (max= (m/round a) (Math/round a))))
 
+;; utililties for the -exact tests
+(defn no-overflow?
+  [f ^long x ^long y]
+  (try
+    (js/Number.isSafeInteger (f x y))
+    (catch ArithmeticException _ false)))
+
+(defmacro throws?
+  [expr]
+  `(try ~expr false (catch Exception _# true)))
+
+(defspec add-exact 1000
+  (prop/for-all [[x y] (gen/tuple safe-integer safe-integer)]
+    (if (no-overflow? + x y)
+      (= (m/add-exact x y) (Math/addExact ^long x ^long y))
+      (throws? (m/add-exact x y)))))
+
+(defspec subtract-exact 1000
+  (prop/for-all [[x y] (gen/tuple safe-integer safe-integer)]
+    (if (no-overflow? - x y)
+      (= (m/subtract-exact x y) (Math/subtractExact ^long x ^long y))
+      (throws? (m/subtract-exact x y)))))
+
+(defspec multiply-exact 1000
+  (prop/for-all [[x y] (gen/tuple safe-integer safe-integer)]
+    (if (no-overflow? * x y)
+      (= (m/multiply-exact x y) (Math/multiplyExact ^long x ^long y))
+      (throws? (m/multiply-exact x y)))))
+
+(defspec increment-exact 1000
+  (prop/for-all [x safe-integer]
+    (if (no-overflow? + x 1)
+      (= (m/increment-exact x) (Math/incrementExact ^long x))
+      (throws? (m/increment-exact x)))))
+
+(defspec decrement-exact 1000
+  (prop/for-all [x safe-integer]
+    (if (no-overflow? - x 1)
+      (= (m/decrement-exact x) (Math/decrementExact ^long x))
+      (throws? (m/decrement-exact x)))))
+
 (defspec floor-div-test 1000
-  (prop/for-all [x gen/large-integer y (gen/such-that #(not= % 0) gen/large-integer)]
+  (prop/for-all [x safe-integer y (gen/such-that #(not= % 0) safe-integer)]
     (= (m/floor-div x y) (Math/floorDiv ^long x ^long y))))
 
 (defspec floor-mod-test 1000
-  (prop/for-all [x gen/large-integer y (gen/such-that #(not= % 0) gen/large-integer)]
+  (prop/for-all [x safe-integer y (gen/such-that #(not= % 0) safe-integer)]
     (= (m/floor-mod x y) (Math/floorMod ^long x ^long y))))  ;; type hints to avoid CLJ-2674
 
 (defspec get-exponent-test 1000

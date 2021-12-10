@@ -534,7 +534,7 @@
   {:doc "Returns the sum of x and y, throws an exception on overflow. "
    :added "1.10.892"}
   [x y]
-  (let [r (+ x y)]
+  (let [r (clojure.core/+ x y)]
     (if (or (> r js/Number.MAX_SAFE_INTEGER) (< r js/Number.MIN_SAFE_INTEGER))
       (throw (ex-info "Integer overflow" {:fn "add-exact"}))
       r)))
@@ -561,7 +561,7 @@
   {:doc "Returns a incremented by 1, throws ArithmeticException on overflow."
    :added "1.10.892"}
   [a]
-  (if (== a js/Number.MAX_SAFE_INTEGER)
+  (if (or (>= a js/Number.MAX_SAFE_INTEGER) (< a js/Number.MIN_SAFE_INTEGER))
     (throw (ex-info "Integer overflow" {:fn "increment-exact"}))
     (inc a)))
 
@@ -569,7 +569,7 @@
   {:doc "Returns a decremented by 1, throws ArithmeticException on overflow. "
    :added "1.10.892"}
   [a]
-  (if (== a js/Number.MIN_SAFE_INTEGER)
+  (if (or (<= a js/Number.MIN_SAFE_INTEGER) (> a js/Number.MAX_SAFE_INTEGER))
     (throw (ex-info "Integer overflow" {:fn "decrement-exact"}))
     (dec a)))
 
@@ -590,9 +590,9 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorDiv-long-long-"
    :added "1.10.892"}
   [x y]
-  (if-not (and ^boolean (js/Number.isInteger x) ^boolean (js/Number.isInteger y))
-    (throw (ex-info "floor-div called with non-integer arguments"
-                    {:x-int? (js/isInteger x :y-int? (js/isInteger y))}))
+  (if-not (and ^boolean (js/Number.isSafeInteger x) ^boolean (js/Number.isSafeInteger y))
+    (throw (ex-info "floor-div called with non-safe-integer arguments"
+                    {:x-int? (js/Number.isSafeInteger x) :y-int? (js/Number.isSafeInteger y)}))
     (let [r (long (/ x y))]
       (if (and (xor (< x 0) (< y 0)) (not (== (* r y) x)))
         (dec r)
@@ -604,9 +604,9 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorMod-long-long-"
    :added "1.10.892"}
   [x y]
-  (if-not (and ^boolean (js/Number.isInteger x) ^boolean (js/Number.isInteger y))
-    (throw (ex-info "floor-mod called with non-integer arguments"
-                    {:x-int? (js/isInteger x :y-int? (js/isInteger y))}))
+  (if-not (and ^boolean (js/Number.isSafeInteger x) ^boolean (js/Number.isSafeInteger y))
+    (throw (ex-info "floor-mod called with non-safe-integer arguments"
+                    {:x-int? (js/Number.isSafeInteger x) :y-int? (js/Number.isSafeInteger y)}))
     ;; this avoids using floor-div to keep within the safe integer range
     (let [r (long (/ x y))]
       (if (and (xor (< x 0) (< y 0)) (not (== (* r y) x)))
@@ -781,7 +781,7 @@
         b31 (+ sx sy c31)
         lr (bit-or (bit-and lr INT32-NON-SIGN-BITS) (<< b31 31))
         c32 (>> b31 1)
-        hr (+ hx hy c32)]
+        hr (bit-and INT32-MASK (+ hx hy c32))]
     [hr lr]))
 
 (defn ^number next-after
