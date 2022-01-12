@@ -3,7 +3,7 @@ A ClojureScript port of [`clojure.java.math`](https://clojure.github.io/clojure/
 
 This can be included in `deps.edn` by adding the following entry to the `:deps` map:
 ```
-com.github.quoll/cljs-math {:git/tag "v0.1.0" :git/sha "cf5c78d"}
+com.github.quoll/cljs-math {:git/tag "v0.1.2" :git/sha "e9abd32"}
 ```
 
 The prime focus on this library is correctness before performance. It matches `clojure.java.math` as closely as possible.
