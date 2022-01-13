@@ -2,7 +2,7 @@
       :author "Paula Gearon" }
     cljs.math
   ;; create space to load this in Clojure for testing
-  #?@(:clj ((:refer-clojure :exclude [aset aget +])
+  #?@(:clj ((:refer-clojure :exclude [aset aget + unsigned-bit-shift-right bit-shift-right bit-shift-left])
             (:require [js :refer [aset aget +]])
             (:import [js ArrayBuffer Uint8Array Uint32Array Float64Array]))))
 
@@ -72,19 +72,17 @@
 
 (def ^{:private true :const true} INT32-NON-SIGN-BITS 0x7FFFFFFF)
 
-;; rename the bit-shift operations for convenience in porting,
-;; and because shortening the code makes it a little easier to read
-(def << #?(:cljs bit-shift-left :clj js/<<))
-(def >> #?(:cljs bit-shift-right :clj js/>>))
-(def >>> #?(:cljs unsigned-bit-shift-right :clj js/>>>))
+#?(:clj (def bit-shift-left js/<<))
+#?(:clj (def bit-shift-right js/>>))
+#?(:clj (def unsigned-bit-shift-right js/>>>))
 
 (defn u<
   {:doc "unsigned less-than comparator for 32-bit values"
    :private true}
   [a b]
   ;; compare the top nybble
-  (let [ab (>>> a 28)
-        bb (>>> b 28)]
+  (let [ab (unsigned-bit-shift-right a 28)
+        bb (unsigned-bit-shift-right b 28)]
     (or (< ab bb)  ;; if the top nybble of a is less then the whole value is less
         (and (= ab bb)  ;; if the top nybble is equal then compare the remaining bits of both
              (< (bit-and a 0x0fffffff) (bit-and b 0x0fffffff))))))
@@ -249,12 +247,12 @@
   (if (< hx 0x00100000) ;; subnormal
     (let [hx-zero? (zero? hx)
           start-ix (if hx-zero? -1043 -1022)
-          start-i (if hx-zero? lx (<< hx 11))]
+          start-i (if hx-zero? lx (bit-shift-left hx 11))]
       (loop [ix start-ix i start-i]
         (if-not (> i 0)
           ix
-          (recur (dec ix) (<< i 1)))))
-    (- (>> hx 20) 1023)))
+          (recur (dec ix) (bit-shift-left i 1)))))
+    (- (bit-shift-right hx 20) 1023)))
 
 (defn ^number setup-hl
   {:doc "internal function to setup and align integer words"
@@ -264,14 +262,14 @@
     [(bit-or 0x00100000 (bit-and 0x000fffff h)) l]
     (let [n (- -1022 i)]
       (if (<= n 31)
-        [(bit-or (<< h n) (>>> l (- 32 n))) (<< l n)]
-        [(<< l (- n 32)) 0]))))
+        [(bit-or (bit-shift-left h n) (unsigned-bit-shift-right l (- 32 n))) (bit-shift-left l n)]
+        [(bit-shift-left l (- n 32)) 0]))))
 
 (defn ^number IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
   Reimplements __ieee754_fmod from the JDK.
   Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_fmod.c
-  << and >> convert numbers to signed 32-bit
+  bit-shift-left and bit-shift-right convert numbers to signed 32-bit
   Fortunately the values that are shifted are expected to be 32 bit signed."}
   [x y]
   ;; return exception values
@@ -298,7 +296,7 @@
       (cond
         ;; additional exception values
         (and hx<=hy (or (< hx hy) (< lx ly))) x ;; |x|<|y| return x
-        (and hx<=hy (= lx ly)) (aget Zero (>>> sx 31)) ;; |x|=|y| return x*0
+        (and hx<=hy (= lx ly)) (aget Zero (unsigned-bit-shift-right sx 31)) ;; |x|=|y| return x*0
 
         :default
         ;; determine ix = ilogb(x), iy = ilogb(y)
@@ -315,10 +313,10 @@
                             (let [hz (if (u< lx ly) (- hx hy 1) (- hx hy))
                                   lz (- lx ly)
                                   [hx lx] (if (< hz 0)
-                                            [(+ hx hx (>>> lx 31)) (+ lx lx)]
+                                            [(+ hx hx (unsigned-bit-shift-right lx 31)) (+ lx lx)]
                                             (if (zero? (bit-or hz lz))
                                               (throw (ex-info "Signed zero" {:zero true}))
-                                              [(+ hz hz (>>> lz 31)) (+ lz lz)]))]
+                                              [(+ hz hz (unsigned-bit-shift-right lz 31)) (+ lz lz)]))]
                               (recur (dec n) (bit-and INT32-MASK hx) (bit-and INT32-MASK lx)))))
                 hz (if (u< lx ly) (- hx hy 1) (- hx hy))
                 lz (- lx ly)
@@ -330,24 +328,24 @@
                 [hx lx iy] (loop [hx hx lx lx iy iy]
                              (if-not (< hx 0x00100000)
                                [hx lx iy]
-                               (recur (+ hx hx (>>> lx 31)) (+ lx lx) (dec iy))))]
+                               (recur (+ hx hx (unsigned-bit-shift-right lx 31)) (+ lx lx) (dec iy))))]
             ;; use these high and low ints to update the double and return it
             (if (>= iy -1022)
-              (let [hx (bit-or (- hx 0x00100000) (<< (+ iy 1023) 20 ))]
+              (let [hx (bit-or (- hx 0x00100000) (bit-shift-left (+ iy 1023) 20))]
                 (aset i HI-x (bit-or hx sx))
                 (aset i LO-x lx)
                 (aget d xpos))
               (let [n (- -1022 iy)
                     [hx lx] (cond
-                              (<= n 20) [(>> hx n)
-                                         (bit-or (>>> lx n) (<< hx (- 32 n)))]
+                              (<= n 20) [(bit-shift-right hx n)
+                                         (bit-or (unsigned-bit-shift-right lx n) (bit-shift-left hx (- 32 n)))]
                               (<= n 31) [sx
-                                         (bit-or (<< hx (- 32 n)) (>>> lx n))]
-                              :default [sx (>> (- n 32))])]
+                                         (bit-or (bit-shift-left hx (- 32 n)) (unsigned-bit-shift-right lx n))]
+                              :default [sx (bit-shift-right hx (- n 32))])]
                 (aset i HI-x (bit-or hx sx))
                 (aset i LO-x lx)
                 (* (aget d xpos) 1.0))))
-          (catch #?(:clj Exception :cljs :default) _ (aget Zero (>>> sx 31))))))))
+          (catch #?(:clj Exception :cljs :default) _ (aget Zero (unsigned-bit-shift-right sx 31))))))))
 
 (defn ^number IEEE-remainder
   {:doc "Returns the remainder per IEEE 754 such that
@@ -656,7 +654,7 @@
                    i (js/Uint32Array. a)
                    hi (if little-endian? 1 0)]
                (aset f 0 d)
-               (- (>> (bit-and (aget i hi) EXP-BITMASK32) (dec SIGNIFICAND-WIDTH32)) EXP-BIAS))))
+               (- (bit-shift-right (bit-and (aget i hi) EXP-BITMASK32) (dec SIGNIFICAND-WIDTH32)) EXP-BIAS))))
 
 (defn ^number hi-lo->double
   {:doc "Converts a pair of 32 bit integers into an IEEE-754 64 bit floating point number.
@@ -676,7 +674,7 @@
   [n]
   (assert (and (>= n EXP-MIN) (<= n EXP-MAX)))
   (hi-lo->double
-   (bit-and (<< (+ n EXP-BIAS) (dec SIGNIFICAND-WIDTH32)) EXP-BITMASK32) 0))
+   (bit-and (bit-shift-left (+ n EXP-BIAS) (dec SIGNIFICAND-WIDTH32)) EXP-BITMASK32) 0))
 
 (defn ^number ulp
   {:doc "Returns the size of an ulp (unit in last place) for d.
@@ -699,8 +697,8 @@
             (power-of-two e)
             (let [shift (- e (- EXP-MIN 31 SIGNIFICAND-WIDTH32))]
               (if (< shift 32)
-                (hi-lo->double 0 (<< 1 shift))
-                (hi-lo->double (<< 1 (- shift 32)) 0)))))))
+                (hi-lo->double 0 (bit-shift-left 1 shift))
+                (hi-lo->double (bit-shift-left 1 (- shift 32)) 0)))))))
     :default ##Inf))
 
 (defn ^number signum
@@ -774,13 +772,13 @@
   This handles overflow from the low-order words into the high order words."
    :private true}
   [hx lx hy ly]
-  (let [sx (>>> (bit-and lx INT32-NON-SIGN-BIT) 31)
-        sy (>>> (bit-and ly INT32-NON-SIGN-BIT) 31)
+  (let [sx (unsigned-bit-shift-right (bit-and lx INT32-NON-SIGN-BIT) 31)
+        sy (unsigned-bit-shift-right (bit-and ly INT32-NON-SIGN-BIT) 31)
         lr (+ (bit-and INT32-NON-SIGN-BITS lx) (bit-and INT32-NON-SIGN-BITS ly))
-        c31 (>>> (bit-and lr INT32-NON-SIGN-BIT) 31)
+        c31 (unsigned-bit-shift-right (bit-and lr INT32-NON-SIGN-BIT) 31)
         b31 (+ sx sy c31)
-        lr (bit-or (bit-and lr INT32-NON-SIGN-BITS) (<< b31 31))
-        c32 (>> b31 1)
+        lr (bit-or (bit-and lr INT32-NON-SIGN-BITS) (bit-shift-left b31 31))
+        c32 (bit-shift-right b31 1)
         hr (bit-and INT32-MASK (+ hx hy c32))]
     [hr lr]))
 
@@ -906,7 +904,7 @@
                       [(Math/min scaleFactor MAX_SCALE) 512 two-to-the-double-scale-up])
         ;; Calculate (scaleFactor % +/-512), 512 = 2^9
         ;; technique from "Hacker's Delight" section 10-2
-        t (>>> (>> scale-factor 8) 23)
+        t (unsigned-bit-shift-right (bit-shift-right scale-factor 8) 23)
         exp-adjust (- (bit-and (+ scale-factor t) 511) t)]
     (loop [d (* d (power-of-two exp-adjust)) scale-factor (- scale-factor exp-adjust)]
       (if (zero? scale-factor)
