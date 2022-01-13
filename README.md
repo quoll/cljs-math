@@ -24,7 +24,7 @@ clj -X:test
 My hope is that this will be accepted by ClojureScript. If it is, then the Java tests may be dropped. This would allow the primary file to be renamed to `.cljs` and the namespace updated to `clojure.math`.
 
 # License
-Copyright © 2022 Paula Gearon
+Copyright © 2021-2022 Paula Gearon
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
