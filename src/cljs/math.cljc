@@ -271,7 +271,7 @@
   Fortunately the values that are shifted are expected to be 32 bit signed."}
   [x y]
   ;; return exception values
-  (if (or (zero? y) ^boolean (js/isNaN y) (not (js/isFinite x)))
+  (if (or (zero? y) ^boolean (js/isNaN y) (not ^boolean (js/isFinite x)))
     ##NaN
 
     ;; create a buffer large enough for 2 doubles
@@ -365,9 +365,9 @@
     ^boolean (js/isNaN divisor) ##NaN
     ;; check if dividend is ##Inf ##-Inf or ##NaN
     ^boolean (js/isNaN dividend) ##NaN
-    (not (js/isFinite dividend)) ##NaN
+    (not ^boolean (js/isFinite dividend)) ##NaN
     ;; dividend is finish, check if divisor is infinite
-    (not (js/isFinite divisor)) dividend
+    (not ^boolean (js/isFinite divisor)) dividend
 
     :default
     ;; create a buffer large enough for 2 doubles
@@ -586,7 +586,7 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorDiv-long-long-"
    :added "1.10.892"}
   [x y]
-  (if-not (and (js/Number.isSafeInteger x) (js/Number.isSafeInteger y))
+  (if-not (and ^boolean (js/Number.isSafeInteger x) ^boolean (js/Number.isSafeInteger y))
     (throw (ex-info "floor-div called with non-safe-integer arguments"
                     {:x-int? (js/Number.isSafeInteger x) :y-int? (js/Number.isSafeInteger y)}))
     (let [r (long (/ x y))]
@@ -600,7 +600,7 @@
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorMod-long-long-"
    :added "1.10.892"}
   [x y]
-  (if-not (and (js/Number.isSafeInteger x) (js/Number.isSafeInteger y))
+  (if-not (and ^boolean (js/Number.isSafeInteger x) ^boolean (js/Number.isSafeInteger y))
     (throw (ex-info "floor-mod called with non-safe-integer arguments"
                     {:x-int? (js/Number.isSafeInteger x) :y-int? (js/Number.isSafeInteger y)}))
     ;; this avoids using floor-div to keep within the safe integer range
@@ -645,7 +645,7 @@
    :added "1.10.892"}
   [d]
   (cond
-    (or ^boolean (js/isNaN d) (not (js/isFinite d))) (inc EXP-MAX)
+    (or ^boolean (js/isNaN d) (not ^boolean (js/isFinite d))) (inc EXP-MAX)
     (zero? d) (dec EXP-MIN)
     :default (let [a (js/ArrayBuffer. 8)
                    f (js/Float64Array. a)
