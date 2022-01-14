@@ -166,8 +166,6 @@
   If a is ##Inf => ##Inf
   If a is zero => ##-Inf
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/log"
-   :inline-arities #{1}
-   :inline (fn [a] `(Math/log ~a))
    :added "1.10.892"}
   [a] (Math/log a))
 
