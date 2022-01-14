@@ -84,7 +84,7 @@
   (let [ab (unsigned-bit-shift-right a 28)
         bb (unsigned-bit-shift-right b 28)]
     (or (< ab bb)  ;; if the top nybble of a is less then the whole value is less
-        (and (= ab bb)  ;; if the top nybble is equal then compare the remaining bits of both
+        (and (== ab bb)  ;; if the top nybble is equal then compare the remaining bits of both
              (< (bit-and a 0x0fffffff) (bit-and b 0x0fffffff))))))
 
 ;; This is to distinguish between integer addition and doubles addition
@@ -294,7 +294,7 @@
       (cond
         ;; additional exception values
         (and hx<=hy (or (< hx hy) (< lx ly))) x ;; |x|<|y| return x
-        (and hx<=hy (= lx ly)) (aget Zero (unsigned-bit-shift-right sx 31)) ;; |x|=|y| return x*0
+        (and hx<=hy (== lx ly)) (aget Zero (unsigned-bit-shift-right sx 31)) ;; |x|=|y| return x*0
 
         :default
         ;; determine ix = ilogb(x), iy = ilogb(y)
@@ -800,7 +800,7 @@
         f (js/Float64Array. a)
         i (js/Uint32Array. a)]
     (cond
-      (> start direction) (if-not (= start 0.0)
+      (> start direction) (if-not (zero? start)
                             (let [_ (aset f 0 start)
                                   ht (aget i HI)
                                   lt (aget i LO)
@@ -825,7 +825,7 @@
                             (aset i HI hr)
                             (aset i LO lr)
                             (aget f 0))
-      (= start direction) direction
+      (== start direction) direction
       :default (d+ start direction))))  ;; isNaN(start) || isNaN(direction)
 
 (defn ^number next-up
@@ -863,7 +863,7 @@
    :added "1.10.892"}
   [d]
   (cond
-    (or ^boolean (js/isNaN d) (= ##-Inf d)) d
+    (or ^boolean (js/isNaN d) (== ##-Inf d)) d
     (zero? d) (- MIN-FLOAT-VALUE)
     :default
     (let [a (js/ArrayBuffer. 8)
