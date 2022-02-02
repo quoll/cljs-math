@@ -50,7 +50,7 @@
   (is (= "6" (cljs-eval "(+ 1 2 3)"))))
 
 (deftest cljs-match-sanity-test
-  (is (= "42" (cljs-eval "(cljs.math/abs -42)"))))
+  (is (= "42" (cljs-eval "(cljs.math/negate-exact -42)"))))
 
 (defn n==
   [a b]

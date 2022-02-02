@@ -11,27 +11,27 @@
 (def
   ^{:doc "Constant for Euler's number e, the base for natural logarithms.
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/E"
-    :added "1.10.892"
+    :added "1.11.10"
     :tag number
     :const true} E Math/E)
 
 (def
   ^{:doc "Constant for pi, the ratio of the circumference of a circle to its diameter.
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/PI"
-    :added "1.10.892"
+    :added "1.11.10"
     :tag number
     :const true} PI Math/PI)
 
 (def
   ^{:doc "Constant used to convert an angular value in degrees to the equivalent in radians"
     :private true
-    :added "1.10.892"
+    :added "1.11.10"
     :const true} DEGREES-TO-RADIANS 0.017453292519943295)
 
 (def
   ^{:doc "Constant used to convert an angular value in radians to the equivalent in degrees"
     :private true
-    :added "1.10.892"
+    :added "1.11.10"
     :const true} RADIANS-TO-DEGREES 57.29577951308232)
 
 (def ^{:private true :const true} TWO-TO-THE-52 0x10000000000000)
@@ -46,9 +46,9 @@
 
 (def ^{:private true :const true} EXP-MIN -1022)
 
-(def ^{:const true} MIN-FLOAT-VALUE 5e-324) ;; bit representation of 0x0000000000000001
+;; js/Number.MIN_VALUE has a bit representation of 0x0000000000000001
 
-(def ^{:const true} MAX-FLOAT-VALUE 1.7976931348623157e+308) ;; bit representation of 0x7FEFFFFFFFFFFFFF
+;; js/Number.MAX_VALUE has a bit representation of 0x7FEFFFFFFFFFFFFF
 
 (defn get-little-endian
   "Tests the platform for endianness. Returns true when little-endian, false otherwise."
@@ -96,14 +96,14 @@
   If a is ##NaN, ##-Inf, ##Inf => ##NaN
   If a is zero => zero with the same sign as a
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sin"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/sin a))
 
 (defn ^number cos
   {:doc "Returns the cosine of an angle.
   If a is ##NaN, ##-Inf, ##Inf => ##NaN
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/cos"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/cos a))
 
 (defn ^number tan
@@ -111,7 +111,7 @@
   If a is ##NaN, ##-Inf, ##Inf => ##NaN
   If a is zero => zero with the same sign as a
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/tan"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/tan a))
 
 (defn ^number asin
@@ -119,14 +119,14 @@
   If a is ##NaN or |a|>1 => ##NaN
   If a is zero => zero with the same sign as a
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/asin"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/asin a))
 
 (defn ^number acos
   {:doc "Returns the arc cosine of a, in the range 0.0 to pi.
   If a is ##NaN or |a|>1 => ##NaN
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/acos"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/acos a))
 
 (defn ^number atan
@@ -134,20 +134,20 @@
   If a is ##NaN => ##NaN
   If a is zero => zero with the same sign as a
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/atan"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/atan a))
 
 (defn ^number to-radians
   {:doc "Converts an angle in degrees to an approximate equivalent angle in radians.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#toRadians-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [deg]
   (* deg DEGREES-TO-RADIANS))
 
 (defn ^number to-degrees
   {:doc "Converts an angle in radians to an approximate equivalent angle in degrees.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#toDegrees-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [r]
   (* r RADIANS-TO-DEGREES))
 
@@ -157,7 +157,7 @@
   If a is ##Inf => ##Inf
   If a is ##-Inf => +0.0
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/exp"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/exp a))
 
 (defn ^number log
@@ -166,7 +166,7 @@
   If a is ##Inf => ##Inf
   If a is zero => ##-Inf
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/log"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/log a))
 
 (defn ^number log10
@@ -175,7 +175,7 @@
   If a is ##Inf => ##Inf
   If a is zero => ##-Inf
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/log10"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/log10 a))
 
 (defn ^number sqrt
@@ -184,7 +184,7 @@
   If a is ##Inf => ##Inf
   If a is zero => a
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sqrt"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/sqrt a))
 
 (defn ^number cbrt
@@ -193,14 +193,14 @@
   If a is ##Inf or ##-Inf => a
   If a is zero => zero with sign matching a
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/cbrt"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a] (Math/cbrt a))
 
 (defn ^number fabs
   {:doc "Internal function to convert doubles to absolute values.
   This duplicates the C implementations in Java, in case there is are corner-case differences."
    :private true
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x]
   ;; create a buffer large enough for a double
   (let [a (js/ArrayBuffer. 8)
@@ -357,7 +357,7 @@
    Method: based on fmod return x-[x/p]chopped*p exactlp.
    Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_remainder.c
    See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#IEEEremainder-double-double-"
-    :added "1.10.892"}
+    :added "1.11.10"}
   [dividend divisor]
   ;; check for exception values
   (cond
@@ -429,7 +429,7 @@
   If a is ##NaN or ##Inf or ##-Inf or already equal to an integer => a
   Note that if a is `nil` then an exception will be thrown. This matches Clojure, rather than js/Math.ceil
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/ceil"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a]
   (if (some? a)
     (Math/ceil a)
@@ -442,7 +442,7 @@
   If a is less than zero but greater than -1.0 => -0.0
   Note that if a is `nil` then an exception will be thrown. This matches Clojure, rather than js/Math.floor
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a]
   (if (some? a)
     (Math/floor a)
@@ -452,7 +452,7 @@
   {:doc "Returns a double with the magnitude of the first argument and the sign of
   the second.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#copySign-double-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [magnitude sign]
   ;; create a buffer large enough for 2 doubles
   (let [a (js/ArrayBuffer. 16)
@@ -480,7 +480,7 @@
   If two values are equally close, return the even one.
   If a is ##NaN or ##Inf or ##-Inf or zero => a
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#rint-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a]
   (let [sign (copy-sign 1.0, a)
         a (Math/abs a)
@@ -493,14 +493,14 @@
   Computes the phase theta by computing an arc tangent of y/x in the range of -pi to pi.
   For more details on special cases, see:
   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/atan"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [y x] (Math/atan2 y x))
 
 (defn ^number pow
   {:doc "Returns the value of a raised to the power of b.
   For more details on special cases, see:
   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a b] (Math/pow a b))
 
 (defn ^number round
@@ -508,9 +508,9 @@
   closer to ##Inf.
   If a is ##NaN => 0
   If a is ##-Inf => js/Number.MIN_SAFE_INTEGER
-  If a is ##Inf => js/Number/MAX_SAFE_INTEGER
+  If a is ##Inf => js/Number.MAX_SAFE_INTEGER
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a]
   (cond
     ^boolean (js/isNaN a) 0
@@ -523,12 +523,12 @@
   approximately random distribution. Not cryptographically secure. The seed is chosen internally
   and cannot be selected.
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [] (Math/random))
 
 (defn ^number add-exact
   {:doc "Returns the sum of x and y, throws an exception on overflow. "
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x y]
   (let [r (clojure.core/+ x y)]
     (if (or (> r js/Number.MAX_SAFE_INTEGER) (< r js/Number.MIN_SAFE_INTEGER))
@@ -537,7 +537,7 @@
 
 (defn ^number subtract-exact
   {:doc "Returns the difference of x and y, throws ArithmeticException on overflow. "
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x y]
   (let [r (- x y)]
     (if (or (> r js/Number.MAX_SAFE_INTEGER) (< r js/Number.MIN_SAFE_INTEGER))
@@ -546,7 +546,7 @@
 
 (defn ^number multiply-exact
   {:doc "Returns the product of x and y, throws ArithmeticException on overflow. "
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x y]
   (let [r (* x y)]
     (if (or (> r js/Number.MAX_SAFE_INTEGER) (< r js/Number.MIN_SAFE_INTEGER))
@@ -555,7 +555,7 @@
 
 (defn ^number increment-exact
   {:doc "Returns a incremented by 1, throws ArithmeticException on overflow."
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a]
   (if (or (>= a js/Number.MAX_SAFE_INTEGER) (< a js/Number.MIN_SAFE_INTEGER))
     (throw (ex-info "Integer overflow" {:fn "increment-exact"}))
@@ -563,18 +563,18 @@
 
 (defn ^number decrement-exact
   {:doc "Returns a decremented by 1, throws ArithmeticException on overflow. "
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a]
   (if (or (<= a js/Number.MIN_SAFE_INTEGER) (> a js/Number.MAX_SAFE_INTEGER))
     (throw (ex-info "Integer overflow" {:fn "decrement-exact"}))
     (dec a)))
 
-(defn ^number negative-exact
+(defn ^number negate-exact
   {:doc "Returns the negation of a, throws ArithmeticException on overflow. "
-   :added "1.10.892"}
+   :added "1.11.10"}
   [a]
   (if (or (> a js/Number.MAX_SAFE_INTEGER) (< a js/Number.MIN_SAFE_INTEGER))
-    (throw (ex-info "Integer overflow" {:fn "negative-exact"}))
+    (throw (ex-info "Integer overflow" {:fn "negate-exact"}))
     (- a)))
 
 (defn xor
@@ -584,7 +584,7 @@
 (defn ^number floor-div
   {:doc "Integer division that rounds to negative infinity (as opposed to zero).
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorDiv-long-long-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x y]
   (if-not (and ^boolean (js/Number.isSafeInteger x) ^boolean (js/Number.isSafeInteger y))
     (throw (ex-info "floor-div called with non-safe-integer arguments"
@@ -598,7 +598,7 @@
   {:doc "Integer modulus x - (floorDiv(x, y) * y). Sign matches y and is in the
   range -|y| < r < |y|.
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#floorMod-long-long-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x y]
   (if-not (and ^boolean (js/Number.isSafeInteger x) ^boolean (js/Number.isSafeInteger y))
     (throw (ex-info "floor-mod called with non-safe-integer arguments"
@@ -609,40 +609,12 @@
         (- x (* y r) (- y))
         (- x (* y r))))))
 
-(defn ^number abs
-  {:doc "Returns the absolute value of a (long or double).
-  If not negative, a is returned, else negation of a is returned.
-  If a < Number/MIN_SAFE_INTEGER => undefined (approximately -a)
-  If a is a double and zero => +0.0
-  If a is a double and ##Inf or ##-Inf => ##Inf
-  If a is a double and ##NaN => ##NaN
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/abs"
-   :added "1.10.892"}
-  [a] (Math/abs a))
-
-#_(defn max
-  {:doc "Returns the greater of a or b.
-  If a or b is ##NaN => ##NaN
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/max"
-   :added "1.10.892"}
-  [a b]
-  (Math/max a b))
-
-#_(defn min
-  {:doc "Returns the lesser of a or b.
-  If a or b is ##NaN => ##NaN
-  See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min"
-   :added "1.10.892"}
-  [p0 p1]
-  (Math/min p0 p1))
-
-
 (defn ^number get-exponent
   {:doc "Returns the exponent of d.
   If d is ##NaN, ##Inf, ##-Inf => Double/MAX_EXPONENT + 1
   If d is zero or subnormal => Double/MIN_EXPONENT - 1
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#getExponent-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [d]
   (cond
     (or ^boolean (js/isNaN d) (not ^boolean (js/isFinite d))) (inc EXP-MAX)
@@ -681,15 +653,15 @@
   If d is zero => Double/MIN_VALUE
   If d is +/- Double/MAX_VALUE => 2^971
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#ulp-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [d]
   (cond
     ^boolean (js/isNaN d) d
     ^boolean (js/isFinite d)
     (let [e (get-exponent d)]
       (case e
-        1024 (abs d)  ;; EXP-MAX + 1
-        -1023 MIN-FLOAT-VALUE  ;; EXP-MIN - 1
+        1024 (Math/abs d)  ;; EXP-MAX + 1
+        -1023 js/Number.MIN_VALUE  ;; EXP-MIN - 1
         (let [e (- e (+ 31 SIGNIFICAND-WIDTH32))]  ;; SIGNIFICAND_WIDTH64 -1
           (if (>= e EXP-MIN)
             (power-of-two e)
@@ -704,7 +676,7 @@
   If d is ##NaN => ##NaN
   If d is ##Inf or ##-Inf => sign of d
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#signum-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [d]
   (if (or (zero? d) ^boolean (js/isNaN d))
     d
@@ -715,7 +687,7 @@
   If x is ##NaN => ##NaN
   If x is ##Inf or ##-Inf or zero => x
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sinh"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x] (Math/sinh x))
 
 (defn ^number cosh
@@ -724,7 +696,7 @@
   If x is ##Inf or ##-Inf => ##Inf
   If x is zero => 1.0
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/cosh"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x] (Math/cosh x))
 
 (defn ^number tanh
@@ -734,7 +706,7 @@
   If x is ##Inf => +1.0
   If x is ##-Inf => -1.0
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/tanh"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x] (Math/tanh x))
 
 (defn ^number hypot
@@ -742,7 +714,7 @@
   If x or y is ##Inf or ##-Inf => ##Inf
   If x or y is ##NaN and neither is ##Inf or ##-Inf => ##NaN
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/hypot"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x y] (Math/hypot x y))
 
 (defn ^number expm1
@@ -752,7 +724,7 @@
   If x is ##-Inf => -1.0
   If x is zero => x
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/expm1"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x] (Math/expm1 x))
 
 (defn ^number log1p
@@ -762,7 +734,7 @@
   If x is -1 => ##-Inf
   If x is ##Inf => ##Inf
   See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/log1p"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [x] (Math/log1p x))
 
 (defn ^number add64
@@ -792,7 +764,7 @@
   If start is equal to +=Double/MAX_VALUE and direction would cause a larger magnitude
     => ##Inf or ##-Inf with sign matching start
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextAfter-double-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [start direction]
   ; Branch to descending case first as it is more costly than ascending
   ; case due to start != 0.0f conditional.
@@ -813,7 +785,7 @@
                               (aset i LO lr)
                               (aget f 0))
                             ;; start == 0.0 && direction < 0.0
-                            (- MIN-FLOAT-VALUE))
+                            (- js/Number.MIN_VALUE))
       ;; Add +0.0 to get rid of a -0.0 (+0.0 + -0.0 => +0.0)
       ;; then bitwise convert start to integer
       (< start direction) (let [_ (aset f 0 (d+ start 0.0))
@@ -834,7 +806,7 @@
   If d is ##Inf => ##Inf
   If d is zero => Double/MIN_VALUE
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextUp-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [d]
   ;; Use a single conditional and handle the likely cases first
   (if (< d js/Number.POSITIVE_INFINITY)
@@ -860,11 +832,11 @@
   If d is ##Inf => Double/MAX_VALUE
   If d is zero => -Double/MIN_VALUE
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextDown-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [d]
   (cond
     (or ^boolean (js/isNaN d) (== ##-Inf d)) d
-    (zero? d) (- MIN-FLOAT-VALUE)
+    (zero? d) (- js/Number.MIN_VALUE)
     :default
     (let [a (js/ArrayBuffer. 8)
           f (js/Float64Array. a)
@@ -893,7 +865,7 @@
   If d is ##Inf or ##-Inf => ##Inf or ##-Inf respectively
   If d is zero => zero of same sign as d
   See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#nextDown-double-"
-   :added "1.10.892"}
+   :added "1.11.10"}
   [d scaleFactor]
   (let [[scale-factor
          scale-increment

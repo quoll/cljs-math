@@ -8,6 +8,8 @@
 (def ^:const Number.MAX_SAFE_INTEGER  9007199254740991)
 (def ^:const Number.MIN_SAFE_INTEGER -9007199254740991)
 (def ^:const Number.POSITIVE_INFINITY ##Inf)
+(def ^:const Number.MAX_VALUE Double/MAX_VALUE)
+(def ^:const Number.MIN_VALUE Double/MIN_VALUE)
 
 (defn isNaN
   [^double d]
