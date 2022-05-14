@@ -4,6 +4,9 @@ A ClojureScript port of [`clojure.math`](https://clojure.github.io/clojure/branc
 # Notice
 This code is now merged (along with some improvements) into ClojureScript. It first appeared in the ClojureScript 1.11.51 release.
 
+This code remains as a historical reference.
+
+## Obsolete
 This can be included in `deps.edn` by adding the following entry to the `:deps` map:
 ```
 com.github.quoll/cljs-math {:git/tag "v0.1.3" :git/sha "39ad53c"}
