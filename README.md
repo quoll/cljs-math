@@ -1,6 +1,9 @@
 # cljs-math
 A ClojureScript port of [`clojure.math`](https://clojure.github.io/clojure/branch-master/clojure.math-api.html)
 
+# Notice
+This code is now merged (along with some improvements) into ClojureScript. It first appeared in the ClojureScript 1.11.51 release.
+
 This can be included in `deps.edn` by adding the following entry to the `:deps` map:
 ```
 com.github.quoll/cljs-math {:git/tag "v0.1.3" :git/sha "39ad53c"}
@@ -19,9 +22,6 @@ To run the tests entirely in Java, run:
 ```bash
 clj -X:test
 ```
-
-## Future
-My hope is that this will be accepted by ClojureScript. If it is, then the Java tests may be dropped. This would allow the primary file to be renamed to `.cljs` and the namespace updated to `clojure.math`.
 
 # License
 Copyright © 2021-2022 Paula Gearon
