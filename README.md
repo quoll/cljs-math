@@ -2,7 +2,7 @@
 A ClojureScript port of [`clojure.math`](https://clojure.github.io/clojure/branch-master/clojure.math-api.html)
 
 # Notice
-This code is now merged (along with some improvements) into ClojureScript. It first appeared in the ClojureScript 1.11.51 release.
+This code is now merged (along with some improvements) into ClojureScript. It first appeared in the [ClojureScript 1.11.51 release](https://clojurescript.org/news/2022-05-13-release).
 
 This code remains as a historical reference.
 
