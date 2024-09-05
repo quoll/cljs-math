@@ -265,8 +265,13 @@
 
 (defn ^number IEEE-fmod
   {:doc "Return x mod y in exact arithmetic. Method: shift and subtract.
-  Reimplements __ieee754_fmod from the JDK.
-  Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_fmod.c
+  Reimplements __ieee754_fmod from the C implementation in the JDK.
+  Original from \"The Freely Distributed Math Library\": https://www.netlib.org/fdlibm/e_fmod.c
+  First in Java at: 
+  https://github.com/openjdk/jdk/blob/3bc69d393d3e0cb89afc7a86a001e2fbfbd7ac93/jdk/src/java.base/share/native/libfdlibm/e_fmod.c
+  on Aug 17, 2014.
+  This was moved to https://github.com/openjdk/jdk/blob/abfb9008291a65dc76fa8cc740265d43a0d8aa4b/src/java.base/share/classes/java/lang/FdLibm.java#L3357
+  on March 31, 2023.
   bit-shift-left and bit-shift-right convert numbers to signed 32-bit
   Fortunately the values that are shifted are expected to be 32 bit signed."}
   [x y]
@@ -355,7 +360,14 @@
    If dividend is finite and divisor is infinite => dividend
 
    Method: based on fmod return x-[x/p]chopped*p exactlp.
-   Ported from: https://github.com/openjdk/jdk/blob/master/src/java.base/share/native/libfdlibm/e_remainder.c
+
+   Reimplements __ieee754_remainder from the JDK.
+   Original from \"The Freely Distributed Math Library\": https://www.netlib.org/fdlibm/e_remainder.c
+   Originally in Java at: 
+   https://github.com/openjdk/jdk/blob/3bc69d393d3e0cb89afc7a86a001e2fbfbd7ac93/jdk/src/java.base/share/native/libfdlibm/e_remainder.c
+   on Aug 17, 2014.
+   This was moved to https://github.com/openjdk/jdk/blob/abfb9008291a65dc76fa8cc740265d43a0d8aa4b/src/java.base/share/classes/java/lang/FdLibm.java#L3305
+   on March 31, 2023.
    See: https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#IEEEremainder-double-double-"
     :added "1.11.10"}
   [dividend divisor]
